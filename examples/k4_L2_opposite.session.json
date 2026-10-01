@@ -1,0 +1,555 @@
+{
+  "schema": "gadgetlab.session/1",
+  "graph": {
+    "preset": "k4",
+    "seed": null,
+    "n": 4,
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "layout": {
+      "0": [
+        0.5,
+        0.08
+      ],
+      "1": [
+        0.933,
+        0.83
+      ],
+      "2": [
+        0.067,
+        0.83
+      ],
+      "3": [
+        0.5,
+        0.58
+      ]
+    }
+  },
+  "L": 2,
+  "syndrome": [
+    {
+      "e": 0,
+      "t": 0
+    },
+    {
+      "e": 2,
+      "t": 0
+    },
+    {
+      "e": 3,
+      "t": 0
+    },
+    {
+      "e": 5,
+      "t": 0
+    }
+  ],
+  "terminals": [
+    {
+      "q": "V",
+      "v": 0,
+      "t": 0
+    },
+    {
+      "q": "V",
+      "v": 1,
+      "t": 0
+    }
+  ],
+  "scope": "global",
+  "patch": null,
+  "region": [
+    {
+      "e": 0,
+      "t": 0
+    },
+    {
+      "e": 1,
+      "t": 0
+    },
+    {
+      "e": 2,
+      "t": 0
+    },
+    {
+      "e": 3,
+      "t": 0
+    },
+    {
+      "e": 4,
+      "t": 0
+    },
+    {
+      "e": 5,
+      "t": 0
+    }
+  ],
+  "spec": {
+    "preset": "custom",
+    "rows": {
+      "00": [
+        "ge",
+        1
+      ],
+      "01": [
+        "eq",
+        0
+      ],
+      "10": [
+        "eq",
+        0
+      ],
+      "11": [
+        "ge",
+        1
+      ]
+    }
+  },
+  "results": {
+    "decode": {
+      "status": "optimal",
+      "cost": 2,
+      "error": [
+        {
+          "q": "V",
+          "v": 1,
+          "t": 0
+        },
+        {
+          "q": "V",
+          "v": 3,
+          "t": 0
+        }
+      ],
+      "verified": true,
+      "solver": "ilp_cbc",
+      "ms": 3.9,
+      "inputs_hash": "e1840b48cb84d003"
+    },
+    "table": {
+      "terminals": [
+        {
+          "q": "V",
+          "v": 0,
+          "t": 0
+        },
+        {
+          "q": "V",
+          "v": 1,
+          "t": 0
+        }
+      ],
+      "rows": [
+        {
+          "a": "00",
+          "status": "optimal",
+          "cost": 4,
+          "error": [
+            {
+              "q": "E",
+              "e": 0,
+              "l": 1
+            },
+            {
+              "q": "E",
+              "e": 2,
+              "l": 0
+            },
+            {
+              "q": "E",
+              "e": 3,
+              "l": 1
+            },
+            {
+              "q": "E",
+              "e": 5,
+              "l": 0
+            }
+          ]
+        },
+        {
+          "a": "01",
+          "status": "optimal",
+          "cost": 2,
+          "error": [
+            {
+              "q": "V",
+              "v": 1,
+              "t": 0
+            },
+            {
+              "q": "V",
+              "v": 3,
+              "t": 0
+            }
+          ]
+        },
+        {
+          "a": "10",
+          "status": "optimal",
+          "cost": 2,
+          "error": [
+            {
+              "q": "V",
+              "v": 0,
+              "t": 0
+            },
+            {
+              "q": "V",
+              "v": 2,
+              "t": 0
+            }
+          ]
+        },
+        {
+          "a": "11",
+          "status": "optimal",
+          "cost": 6,
+          "error": [
+            {
+              "q": "E",
+              "e": 0,
+              "l": 1
+            },
+            {
+              "q": "E",
+              "e": 1,
+              "l": 0
+            },
+            {
+              "q": "E",
+              "e": 4,
+              "l": 1
+            },
+            {
+              "q": "E",
+              "e": 5,
+              "l": 0
+            },
+            {
+              "q": "V",
+              "v": 0,
+              "t": 0
+            },
+            {
+              "q": "V",
+              "v": 1,
+              "t": 0
+            }
+          ]
+        }
+      ],
+      "unconstrained_cost": 2,
+      "match": {
+        "matches": true,
+        "c": 2,
+        "margin": 1
+      },
+      "inputs_hash": "e2136e376393e94a"
+    },
+    "search": {
+      "params": {
+        "budget": 4096,
+        "seed": 0,
+        "top_k": 50,
+        "max_weight": null,
+        "workers": 1,
+        "solver": "ilp_cbc",
+        "dropped_region": []
+      },
+      "summary": {
+        "candidates": 64,
+        "filtered": 0,
+        "infeasible_syndrome": 0,
+        "rejected": 62,
+        "matched": 2,
+        "solver_calls": 172,
+        "cache_hits": 0,
+        "elapsed_s": 0.549,
+        "exhaustive": true
+      },
+      "matches": [
+        {
+          "rank": 1,
+          "pattern": "101101",
+          "c": 2,
+          "margin": 1,
+          "table": {
+            "terminals": [
+              {
+                "q": "V",
+                "v": 0,
+                "t": 0
+              },
+              {
+                "q": "V",
+                "v": 1,
+                "t": 0
+              }
+            ],
+            "rows": [
+              {
+                "a": "00",
+                "status": "optimal",
+                "cost": 4,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 2,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 3,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  }
+                ]
+              },
+              {
+                "a": "01",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 3,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "10",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "11",
+                "status": "optimal",
+                "cost": 6,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 4,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  }
+                ]
+              }
+            ],
+            "unconstrained_cost": 2,
+            "match": {
+              "matches": true,
+              "c": 2,
+              "margin": 1
+            },
+            "inputs_hash": "e2136e376393e94a"
+          }
+        },
+        {
+          "rank": 2,
+          "pattern": "110011",
+          "c": 2,
+          "margin": 1,
+          "table": {
+            "terminals": [
+              {
+                "q": "V",
+                "v": 0,
+                "t": 0
+              },
+              {
+                "q": "V",
+                "v": 1,
+                "t": 0
+              }
+            ],
+            "rows": [
+              {
+                "a": "00",
+                "status": "optimal",
+                "cost": 4,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 4,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  }
+                ]
+              },
+              {
+                "a": "01",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "10",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 3,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "11",
+                "status": "optimal",
+                "cost": 6,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 2,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 3,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  }
+                ]
+              }
+            ],
+            "unconstrained_cost": 2,
+            "match": {
+              "matches": true,
+              "c": 2,
+              "margin": 1
+            },
+            "inputs_hash": "70abd17e2b4e85eb"
+          }
+        }
+      ],
+      "inputs_hash": "0dd72b763607be45"
+    }
+  },
+  "notes": "Tutorial example: K4 with L = 2, terminals at adjacent corners 0 and 1, a custom spec that asks for unequal terminal values."
+}

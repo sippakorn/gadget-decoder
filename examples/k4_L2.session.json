@@ -1,0 +1,547 @@
+{
+  "schema": "gadgetlab.session/1",
+  "graph": {
+    "preset": "k4",
+    "seed": null,
+    "n": 4,
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "layout": {
+      "0": [
+        0.5,
+        0.08
+      ],
+      "1": [
+        0.933,
+        0.83
+      ],
+      "2": [
+        0.067,
+        0.83
+      ],
+      "3": [
+        0.5,
+        0.58
+      ]
+    }
+  },
+  "L": 2,
+  "syndrome": [
+    {
+      "e": 0,
+      "t": 0
+    },
+    {
+      "e": 3,
+      "t": 0
+    }
+  ],
+  "terminals": [
+    {
+      "q": "V",
+      "v": 0,
+      "t": 0
+    },
+    {
+      "q": "V",
+      "v": 2,
+      "t": 0
+    }
+  ],
+  "scope": "global",
+  "patch": null,
+  "region": [
+    {
+      "e": 0,
+      "t": 0
+    },
+    {
+      "e": 1,
+      "t": 0
+    },
+    {
+      "e": 2,
+      "t": 0
+    },
+    {
+      "e": 3,
+      "t": 0
+    },
+    {
+      "e": 4,
+      "t": 0
+    },
+    {
+      "e": 5,
+      "t": 0
+    }
+  ],
+  "spec": {
+    "preset": "wire",
+    "rows": {
+      "00": [
+        "eq",
+        0
+      ],
+      "01": [
+        "ge",
+        1
+      ],
+      "10": [
+        "ge",
+        1
+      ],
+      "11": [
+        "eq",
+        0
+      ]
+    }
+  },
+  "results": {
+    "decode": {
+      "status": "optimal",
+      "cost": 2,
+      "error": [
+        {
+          "q": "E",
+          "e": 0,
+          "l": 0
+        },
+        {
+          "q": "E",
+          "e": 3,
+          "l": 0
+        }
+      ],
+      "verified": true,
+      "solver": "ilp_cbc",
+      "ms": 3.6,
+      "inputs_hash": "ceb0c5b7f22aa8ec"
+    },
+    "table": {
+      "terminals": [
+        {
+          "q": "V",
+          "v": 0,
+          "t": 0
+        },
+        {
+          "q": "V",
+          "v": 2,
+          "t": 0
+        }
+      ],
+      "rows": [
+        {
+          "a": "00",
+          "status": "optimal",
+          "cost": 2,
+          "error": [
+            {
+              "q": "E",
+              "e": 4,
+              "l": 1
+            },
+            {
+              "q": "V",
+              "v": 1,
+              "t": 0
+            }
+          ]
+        },
+        {
+          "a": "01",
+          "status": "optimal",
+          "cost": 4,
+          "error": [
+            {
+              "q": "E",
+              "e": 0,
+              "l": 1
+            },
+            {
+              "q": "E",
+              "e": 1,
+              "l": 0
+            },
+            {
+              "q": "E",
+              "e": 5,
+              "l": 0
+            },
+            {
+              "q": "V",
+              "v": 2,
+              "t": 0
+            }
+          ]
+        },
+        {
+          "a": "10",
+          "status": "optimal",
+          "cost": 4,
+          "error": [
+            {
+              "q": "E",
+              "e": 1,
+              "l": 0
+            },
+            {
+              "q": "E",
+              "e": 2,
+              "l": 0
+            },
+            {
+              "q": "E",
+              "e": 3,
+              "l": 1
+            },
+            {
+              "q": "V",
+              "v": 0,
+              "t": 0
+            }
+          ]
+        },
+        {
+          "a": "11",
+          "status": "optimal",
+          "cost": 4,
+          "error": [
+            {
+              "q": "E",
+              "e": 4,
+              "l": 1
+            },
+            {
+              "q": "V",
+              "v": 0,
+              "t": 0
+            },
+            {
+              "q": "V",
+              "v": 2,
+              "t": 0
+            },
+            {
+              "q": "V",
+              "v": 3,
+              "t": 0
+            }
+          ]
+        }
+      ],
+      "unconstrained_cost": 2,
+      "match": {
+        "matches": false,
+        "c": null,
+        "margin": null
+      },
+      "inputs_hash": "010ddf68de356c59"
+    },
+    "search": {
+      "params": {
+        "budget": 4096,
+        "seed": 0,
+        "top_k": 50,
+        "max_weight": null,
+        "workers": 2,
+        "solver": "ilp_cbc",
+        "dropped_region": []
+      },
+      "summary": {
+        "candidates": 64,
+        "filtered": 0,
+        "infeasible_syndrome": 0,
+        "rejected": 62,
+        "matched": 2,
+        "solver_calls": 146,
+        "cache_hits": 0,
+        "elapsed_s": 0.495,
+        "exhaustive": true
+      },
+      "matches": [
+        {
+          "rank": 1,
+          "pattern": "101101",
+          "c": 2,
+          "margin": 1,
+          "table": {
+            "terminals": [
+              {
+                "q": "V",
+                "v": 0,
+                "t": 0
+              },
+              {
+                "q": "V",
+                "v": 2,
+                "t": 0
+              }
+            ],
+            "rows": [
+              {
+                "a": "00",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 3,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "01",
+                "status": "optimal",
+                "cost": 4,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 2,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "10",
+                "status": "optimal",
+                "cost": 4,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 3,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "11",
+                "status": "optimal",
+                "cost": 2,
+                "error": [
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              }
+            ],
+            "unconstrained_cost": 2,
+            "match": {
+              "matches": true,
+              "c": 2,
+              "margin": 1
+            },
+            "inputs_hash": "1974e8554753bca3"
+          }
+        },
+        {
+          "rank": 2,
+          "pattern": "101111",
+          "c": 3,
+          "margin": 1,
+          "table": {
+            "terminals": [
+              {
+                "q": "V",
+                "v": 0,
+                "t": 0
+              },
+              {
+                "q": "V",
+                "v": 2,
+                "t": 0
+              }
+            ],
+            "rows": [
+              {
+                "a": "00",
+                "status": "optimal",
+                "cost": 3,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 2,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 1,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "01",
+                "status": "optimal",
+                "cost": 5,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 0,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 2,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 4,
+                    "l": 1
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "10",
+                "status": "optimal",
+                "cost": 5,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 1,
+                    "l": 0
+                  },
+                  {
+                    "q": "E",
+                    "e": 3,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 4,
+                    "l": 1
+                  },
+                  {
+                    "q": "E",
+                    "e": 5,
+                    "l": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  }
+                ]
+              },
+              {
+                "a": "11",
+                "status": "optimal",
+                "cost": 3,
+                "error": [
+                  {
+                    "q": "E",
+                    "e": 4,
+                    "l": 1
+                  },
+                  {
+                    "q": "V",
+                    "v": 0,
+                    "t": 0
+                  },
+                  {
+                    "q": "V",
+                    "v": 2,
+                    "t": 0
+                  }
+                ]
+              }
+            ],
+            "unconstrained_cost": 3,
+            "match": {
+              "matches": true,
+              "c": 3,
+              "margin": 1
+            },
+            "inputs_hash": "064c0220ddcf0ff5"
+          }
+        }
+      ],
+      "inputs_hash": "1e27bc0f29e488e2"
+    }
+  },
+  "notes": "Example: K4 with L = 2, two fired checks, two terminals, the wire spec, and every check in the region."
+}

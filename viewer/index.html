@@ -1,0 +1,1632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GadgetLab</title>
+<style>
+:root {
+  color-scheme: light;
+  --ground: #F3F5F7;
+  --ink: #1D2733;
+  --rule: #98A3AF;
+  --syndrome: #B5176F;
+  --error: #0E7A86;
+  --patch: #DCE7F3;
+  --muted: #56616D;
+  --surface: #FFFFFF;
+  --halo: rgba(29, 39, 51, .42);
+  --hover: rgba(29, 39, 51, .10);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ground: #12161B;
+    --ink: #E4E9EE;
+    --rule: #6B7785;
+    --syndrome: #E0549F;
+    --error: #2BB3C0;
+    --patch: #22344A;
+    --muted: #A7B1BC;
+    --surface: #1A2027;
+    --halo: rgba(228, 233, 238, .50);
+    --hover: rgba(228, 233, 238, .14);
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr) 376px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "top top top" "left canvas right" "legend legend legend";
+}
+@media (max-width: 1200px) { body { grid-template-columns: 228px minmax(0, 1fr) 336px; } }
+.num, td, th, .stat b, .tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+p { margin: 6px 0; }
+h2 { font-size: 18px; font-weight: 600; margin: 0; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+
+/* top bar */
+#top { grid-area: top; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; padding: 10px 16px 8px; border-bottom: 1px solid var(--rule); }
+#top h1 { font-size: 24px; font-weight: 600; margin: 0 6px 0 0; }
+.stat { color: var(--muted); white-space: nowrap; }
+.stat b { color: var(--ink); font-weight: 600; margin-left: 3px; }
+#mode-line { margin-left: auto; font-size: 13px; color: var(--muted); }
+#static-line { flex-basis: 100%; font-size: 13px; }
+
+/* columns */
+#left, #right { overflow-y: auto; padding: 10px 14px 18px; min-height: 0; }
+#left { grid-area: left; border-right: 1px solid var(--rule); }
+#right { grid-area: right; border-left: 1px solid var(--rule); }
+.group { padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.group:last-child { border-bottom: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 5px 0; }
+.row > label { font-size: 13px; color: var(--muted); }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+
+button {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 4px 10px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--ink); }
+button.primary { background: var(--ink); color: var(--ground); border-color: var(--ink); font-weight: 600; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.icon { padding: 1px 7px; min-width: 26px; }
+.tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.tools button { text-align: left; }
+.tools button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.tools kbd { font: inherit; opacity: .7; margin-right: 6px; }
+input, select, textarea {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 3px 6px;
+}
+input[type="number"] { width: 64px; }
+input.wide { width: 82px; }
+textarea { width: 100%; resize: vertical; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; }
+.radio { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.hint { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+.notice { font-size: 13px; border-left: 3px solid var(--rule); padding: 2px 0 2px 8px; margin: 6px 0; }
+.notice.warn { border-left-color: var(--syndrome); }
+.err { font-size: 13px; border-left: 3px solid var(--syndrome); padding: 2px 0 2px 8px; margin: 6px 0; }
+
+/* canvas */
+#canvas { grid-area: canvas; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+#canvas-head { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; padding: 8px 14px; font-size: 13px; border-bottom: 1px solid var(--rule); min-height: 36px; }
+#canvas-head .from { font-weight: 600; }
+#panels-wrap { flex: 1; min-height: 0; overflow: auto; padding: 14px; }
+#panels { display: flex; gap: 14px; align-items: flex-start; }
+#panels.grid { flex-wrap: wrap; }
+#panels.row { flex-wrap: nowrap; }
+figure.panel { margin: 0; flex: none; }
+figure.panel figcaption { font-size: 13px; margin: 0 0 4px; color: var(--muted); }
+figure.panel figcaption b { color: var(--ink); font-weight: 600; }
+figure.panel svg { display: block; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; touch-action: none; }
+#empty { padding: 40px 20px; max-width: 460px; }
+
+/* marks */
+.q-idle, .c-idle { stroke: var(--rule); stroke-width: 1.5; stroke-linecap: round; }
+.q-err { stroke: var(--error); stroke-width: 5; stroke-linecap: round; }
+.c-on { stroke: var(--syndrome); stroke-width: 5; stroke-linecap: round; }
+.halo { stroke: var(--halo); stroke-width: 13; stroke-dasharray: 4 3; }
+.patch-e { stroke: var(--patch); stroke-width: 15; stroke-linecap: round; }
+.patch-v { fill: var(--patch); }
+.vx { fill: var(--ink); }
+.vq { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.vq-err { fill: var(--error); }
+.u-ring { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; }
+.vlabel { font-size: 13px; fill: var(--muted); text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.badge circle { fill: var(--ink); }
+.badge text { fill: var(--surface); font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.hit { stroke: transparent; stroke-width: 14; fill: transparent; }
+.hit:hover { stroke: var(--hover); }
+circle.hit:hover { fill: var(--hover); stroke: none; }
+#panels.tool-syndrome .hit[data-k="zc"], #panels.tool-region .hit[data-k="zc"],
+#panels.tool-terminals .hit[data-k="eq"], #panels.tool-terminals .hit[data-k="vq"],
+#panels.tool-patch .hit[data-k="vx"], #panels.tool-patch .hit[data-k="vq"] { cursor: pointer; }
+#panels.flash .c-on { animation: flash .7s ease-out 1; }
+@keyframes flash { from { stroke-width: 10; } to { stroke-width: 5; } }
+@media (prefers-reduced-motion: reduce) { #panels.flash .c-on { animation: none; } }
+
+#tooltip {
+  position: fixed; z-index: 10; pointer-events: none; max-width: 340px;
+  background: var(--ink); color: var(--ground); font-size: 13px; line-height: 1.35;
+  padding: 6px 9px; border-radius: 4px;
+}
+#tooltip div:first-child { font-weight: 600; }
+
+/* right column */
+.result { margin-top: 6px; }
+.stale { opacity: .5; }
+.stale-label { font-size: 13px; font-weight: 600; border-left: 3px solid var(--rule); padding: 2px 0 2px 8px; margin: 6px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--muted); padding: 3px 6px 3px 0; border-bottom: 1px solid var(--rule); }
+td { padding: 3px 6px 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--rule) 45%, transparent); vertical-align: middle; }
+td button { padding: 1px 8px; }
+tr.shown td { font-weight: 600; }
+.spec-grid { display: grid; grid-template-columns: auto auto auto 1fr; gap: 5px 8px; align-items: center; font-size: 13px; }
+.terms { list-style: none; margin: 4px 0; padding: 0; font-size: 13px; }
+.terms li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.terms .n { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 700; align-items: center; justify-content: center; flex: none; }
+.terms .t { flex: 1; }
+.params { display: grid; grid-template-columns: auto auto auto auto; gap: 5px 8px; align-items: center; font-size: 13px; }
+.params label { color: var(--muted); }
+progress { width: 100%; height: 10px; accent-color: var(--ink); }
+.results { margin-top: 6px; }
+.results button.res { display: grid; grid-template-columns: 34px 34px 52px 34px 1fr; gap: 6px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--rule) 45%, transparent); border-radius: 0; background: transparent; padding: 3px 2px; font-variant-numeric: tabular-nums; }
+.results button.res:hover:not(:disabled) { background: var(--hover); }
+.results .res-head { display: grid; grid-template-columns: 34px 34px 52px 34px 1fr; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); padding: 0 2px 3px; border-bottom: 1px solid var(--rule); }
+.pattern { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r0 { font-size: 13px; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--rule); }
+
+/* legend */
+#legend { grid-area: legend; border-top: 1px solid var(--rule); padding: 7px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; font-size: 13px; }
+#legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+#legend svg { display: block; }
+
+/* self-test */
+body.selftest { display: block; padding: 24px; }
+.st-pass { font-weight: 600; }
+.st-fail { font-weight: 600; color: var(--syndrome); }
+</style>
+</head>
+<body>
+<header id="top">
+  <h1 id="title">GadgetLab</h1>
+  <span class="stat">n<b id="i-n">—</b></span>
+  <span class="stat">N<b id="i-N">—</b></span>
+  <span class="stat">checks<b id="i-m">—</b></span>
+  <span class="stat">k<b id="i-k">—</b></span>
+  <span class="stat">girth<b id="i-girth">—</b></span>
+  <span class="stat">dX<b id="i-dX">—</b></span>
+  <span class="stat">dZ<b id="i-dZ">—</b></span>
+  <button id="btn-distances" type="button">Compute distances</button>
+  <span id="dist-note" class="small muted"></span>
+  <span id="mode-line"></span>
+  <div id="static-line" hidden></div>
+</header>
+
+<aside id="left" aria-label="Controls">
+  <div class="group">
+    <div class="row"><label for="g-preset">Graph</label>
+      <select id="g-preset">
+        <option value="k4">K4</option><option value="k33">K3,3</option><option value="prism">Prism</option>
+        <option value="cube">Cube</option><option value="petersen" selected>Petersen</option><option value="heawood">Heawood</option>
+        <option value="random_cubic">Random cubic</option><option value="custom">Edge list</option>
+      </select>
+    </div>
+    <div class="row"><label for="g-L">Layers L</label>
+      <select id="g-L"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+    </div>
+    <div class="row" id="g-random" hidden>
+      <label for="g-n">n</label><input id="g-n" type="number" min="4" max="40" step="2" value="10">
+      <label for="g-seed">seed</label><input id="g-seed" type="number" min="0" step="1" value="0">
+    </div>
+    <div id="g-custom" hidden>
+      <textarea id="g-edges" rows="3" spellcheck="false" aria-label="Edge list" placeholder="0-1 0-2 0-3 1-2 1-3 2-3"></textarea>
+    </div>
+    <div class="row"><button id="btn-new" type="button">New session</button>
+      <button id="btn-open" type="button">Open session</button>
+      <button id="btn-save" type="button">Save session</button>
+      <input id="file-open" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="row"><button id="btn-undo" type="button" title="Ctrl+Z">Undo</button><button id="btn-redo" type="button" title="Ctrl+Shift+Z">Redo</button></div>
+    <div id="build-msg"></div>
+  </div>
+
+  <div class="group">
+    <div class="tools" role="toolbar" aria-label="Modes">
+      <button type="button" data-tool="syndrome" aria-pressed="true"><kbd>1</kbd>Syndrome</button>
+      <button type="button" data-tool="terminals" aria-pressed="false"><kbd>2</kbd>Terminals</button>
+      <button type="button" data-tool="region" aria-pressed="false"><kbd>3</kbd>Region</button>
+      <button type="button" data-tool="patch" aria-pressed="false"><kbd>4</kbd>Patch</button>
+    </div>
+    <p class="hint" id="tool-hint"></p>
+  </div>
+
+  <div class="group">
+    <div class="row"><span class="small">Syndrome: <b id="s-count" class="tnum">0</b> fired checks</span><button id="btn-clear-syn" type="button">Clear syndrome</button></div>
+    <div class="row"><label for="rs-weight">weight</label><input id="rs-weight" type="number" min="0" step="1" value="3">
+      <label for="rs-seed">seed</label><input id="rs-seed" type="number" min="0" step="1" value="0"></div>
+    <div class="row"><button id="btn-random" type="button">Random syndrome</button><button id="btn-fill-gap0" type="button" hidden>Fill gap 0</button></div>
+    <div class="row"><span class="small">Region: <b id="r-count" class="tnum">0</b> checks</span><button id="btn-clear-region" type="button">Clear region</button></div>
+    <div class="row"><span class="small">Terminals: <b id="t-count" class="tnum">0</b> of 6</span><button id="btn-clear-terms" type="button">Clear terminals</button></div>
+    <div id="left-msg"></div>
+  </div>
+
+  <div class="group">
+    <div class="row"><span class="small muted">Scope</span>
+      <label class="radio"><input type="radio" name="scope" value="global" checked>global</label>
+      <label class="radio"><input type="radio" name="scope" value="local_closed">local_closed</label>
+    </div>
+    <p class="small" id="patch-summary"></p>
+    <div class="row"><label for="p-l0">layers</label><select id="p-l0" aria-label="First patch layer"></select>
+      <span class="small muted">to</span><select id="p-l1" aria-label="Last patch layer"></select></div>
+    <div class="row"><label for="p-centre">ball around</label><select id="p-centre"></select>
+      <label for="p-radius">radius</label><input id="p-radius" type="number" min="0" step="1" value="1"></div>
+    <div class="row"><button id="btn-ball" type="button">Fill patch with ball</button><button id="btn-clear-patch" type="button">Clear patch</button></div>
+  </div>
+
+  <div class="group">
+    <div class="row"><span class="small muted">Panels</span>
+      <label class="radio"><input type="radio" name="arrange" value="grid" checked>grid</label>
+      <label class="radio"><input type="radio" name="arrange" value="row">one row</label>
+    </div>
+    <div class="row"><label class="radio"><input type="checkbox" id="show-labels" checked>vertex numbers</label></div>
+    <p class="hint">Shift-drag a vertex to move it; all panels share the layout.</p>
+  </div>
+
+  <div class="group">
+    <label for="notes" class="small muted">Notes</label>
+    <textarea id="notes" rows="3"></textarea>
+  </div>
+</aside>
+
+<main id="canvas" aria-label="Canvas">
+  <div id="canvas-head" role="status" aria-live="polite"></div>
+  <div id="panels-wrap">
+    <div id="panels" class="grid tool-syndrome"></div>
+    <div id="empty" hidden></div>
+  </div>
+</main>
+
+<aside id="right" aria-label="Results">
+  <section class="group" id="sec-decode" aria-labelledby="h-decode">
+    <div class="head"><h2 id="h-decode">Decode</h2><button id="btn-decode" class="primary" type="button">Decode</button></div>
+    <div id="decode-out"></div>
+  </section>
+  <section class="group" id="sec-table" aria-labelledby="h-table">
+    <div class="head"><h2 id="h-table">Cost table</h2><button id="btn-table" class="primary" type="button">Compute table</button></div>
+    <div id="terms-out"></div>
+    <div id="table-out"></div>
+  </section>
+  <section class="group" id="sec-spec" aria-labelledby="h-spec">
+    <div class="head"><h2 id="h-spec">Spec</h2>
+      <select id="spec-preset" aria-label="Spec preset"><option value="wire">wire</option><option value="copy3">copy3</option><option value="custom">custom</option></select>
+    </div>
+    <div id="spec-out"></div>
+  </section>
+  <section class="group" id="sec-search" aria-labelledby="h-search">
+    <div class="head"><h2 id="h-search">Search</h2></div>
+    <p class="small" id="search-region"></p>
+    <div class="params">
+      <label for="p-budget">budget</label><input id="p-budget" class="wide" type="number" min="1" step="1" value="4096">
+      <label for="p-sseed">seed</label><input id="p-sseed" type="number" min="0" step="1" value="0">
+      <label for="p-topk">top k</label><input id="p-topk" type="number" min="1" step="1" value="50">
+      <label for="p-maxw">max weight</label><input id="p-maxw" type="number" min="0" step="1" placeholder="none">
+      <label for="p-workers">workers</label><input id="p-workers" type="number" min="1" step="1" placeholder="auto">
+    </div>
+    <div class="row"><button id="btn-search" class="primary" type="button">Run search</button><button id="btn-cancel" type="button">Cancel search</button></div>
+    <div id="search-progress"></div>
+    <div id="search-out"></div>
+  </section>
+</aside>
+
+<footer id="legend" aria-label="Legend">
+  <span><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" class="c-on"/></svg>Check, σ = 1</span>
+  <span><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" class="c-idle"/></svg>Check, σ = 0</span>
+  <span><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" class="q-err"/></svg>Error on an edge-qubit</span>
+  <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" class="vq-err"/></svg>Error on a vertex-qubit</span>
+  <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" class="vq"/></svg>Vertex-qubit</span>
+  <span><svg width="20" height="20" aria-hidden="true"><g class="badge"><circle cx="10" cy="10" r="8"/><text x="10" y="10.5">1</text></g></svg>Terminal</span>
+  <span><svg width="30" height="16" aria-hidden="true"><line x1="2" y1="8" x2="28" y2="8" class="halo"/><line x1="2" y1="8" x2="28" y2="8" class="c-idle"/></svg>Region check</span>
+  <span><svg width="30" height="16" aria-hidden="true"><line x1="6" y1="8" x2="24" y2="8" class="patch-e"/><line x1="6" y1="8" x2="24" y2="8" class="q-idle"/></svg>Patch</span>
+  <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="3.5" class="vx"/><circle cx="9" cy="9" r="7.5" class="u-ring"/></svg>Patch vertex</span>
+</footer>
+
+<div id="tooltip" role="tooltip" hidden></div>
+
+<script id="core">
+"use strict";
+// Core: no DOM. An independent implementation of the index map and supports of §3.5,
+// the inputs_hash of the engine, and session validation.
+const Core = (() => {
+  const SCHEMA = "gadgetlab.session/1";
+  const TOP_KEYS = ["schema", "graph", "L", "syndrome", "terminals", "scope", "patch", "region", "spec", "results", "notes"];
+
+  // ---------------------------------------------------------- SHA-256 and canonical JSON
+  const K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+
+  function sha256Hex(text) {
+    const bytes = new TextEncoder().encode(text);
+    const total = ((bytes.length + 9 + 63) >> 6) << 6;
+    const buf = new Uint8Array(total);
+    buf.set(bytes);
+    buf[bytes.length] = 0x80;
+    const view = new DataView(buf.buffer);
+    const bits = bytes.length * 8;
+    view.setUint32(total - 8, Math.floor(bits / 0x100000000));
+    view.setUint32(total - 4, bits >>> 0);
+    const H = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+    const w = new Uint32Array(64);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) w[i] = view.getUint32(off + 4 * i);
+      for (let i = 16; i < 64; i++) {
+        const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+      }
+      let [a, b, c, d, e, f, g, h] = H;
+      for (let i = 0; i < 64; i++) {
+        const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0;
+        const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
+    }
+    return Array.from(H, x => x.toString(16).padStart(8, "0")).join("");
+  }
+
+  // the same text as Python's json.dumps(obj, sort_keys=True, separators=(",", ":"))
+  function canon(v) {
+    if (v === null || v === undefined) return "null";
+    if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+    if (typeof v === "object") return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}";
+    return JSON.stringify(v);
+  }
+  const hashInputs = obj => sha256Hex(canon(obj)).slice(0, 16);
+
+  // ---------------------------------------------------------- index map and supports (§3.5)
+  function makeGeometry(n, edges, L) {
+    const nE = edges.length;
+    const N = nE * L + n * (L - 1), m = nE * (L - 1), mx = n * L;
+    const edgesAt = Array.from({ length: n }, () => []);
+    edges.forEach(([u, w], e) => { edgesAt[u].push(e); edgesAt[w].push(e); });
+    const eq = (e, l) => e * L + l;
+    const vq = (v, t) => nE * L + v * (L - 1) + t;
+    const zc = (e, t) => e * (L - 1) + t;
+    const xc = (v, l) => v * L + l;
+    const qubit = j => j < nE * L
+      ? { q: "E", e: Math.floor(j / L), l: j % L }
+      : { q: "V", v: Math.floor((j - nE * L) / (L - 1)), t: (j - nE * L) % (L - 1) };
+    const check = i => ({ e: Math.floor(i / (L - 1)), t: i % (L - 1) });
+    function zSupport(i) {
+      const { e, t } = check(i);
+      const [u, w] = edges[e];
+      return [eq(e, t), eq(e, t + 1), vq(u, t), vq(w, t)];
+    }
+    function xSupport(k) {
+      const v = Math.floor(k / L), l = k % L;
+      const out = edgesAt[v].map(e => eq(e, l));
+      for (const t of [l - 1, l]) if (t >= 0 && t <= L - 2) out.push(vq(v, t));
+      return out;
+    }
+    // syndrome of an error (a set or list of qubits), recomputed from the supports
+    function syndromeOf(ones) {
+      const x = ones instanceof Set ? ones : new Set(ones);
+      const fired = new Set();
+      for (let i = 0; i < m; i++) {
+        let parity = 0;
+        for (const j of zSupport(i)) if (x.has(j)) parity ^= 1;
+        if (parity) fired.add(i);
+      }
+      return fired;
+    }
+    function patch(U, l0, l1) {
+      const inU = new Set(U), out = [];
+      edges.forEach(([u, w], e) => { if (inU.has(u) || inU.has(w)) for (let l = l0; l <= l1; l++) out.push(eq(e, l)); });
+      for (const v of [...inU].sort((a, b) => a - b)) for (let t = l0; t <= l1 - 1; t++) out.push(vq(v, t));
+      return out.sort((a, b) => a - b);
+    }
+    function enforced(Q) { // checks whose support meets Q
+      const out = new Set();
+      for (let i = 0; i < m; i++) if (zSupport(i).some(j => Q.has(j))) out.add(i);
+      return out;
+    }
+    function qubitIndex(a, field = "qubit") {
+      if (!a || typeof a !== "object") throw new Error(`${field}: expected a qubit address`);
+      if (a.q === "E") {
+        onlyKeys(a, ["q", "e", "l"], field);
+        return eq(intIn(a.e, 0, nE - 1, `${field}.e`), intIn(a.l, 0, L - 1, `${field}.l`));
+      }
+      if (a.q === "V") {
+        onlyKeys(a, ["q", "v", "t"], field);
+        return vq(intIn(a.v, 0, n - 1, `${field}.v`), intIn(a.t, 0, L - 2, `${field}.t`));
+      }
+      throw new Error(`${field}.q: expected "E" or "V"`);
+    }
+    function checkIndex(a, field = "check") {
+      if (!a || typeof a !== "object") throw new Error(`${field}: expected a Z-check address`);
+      onlyKeys(a, ["e", "t"], field);
+      return zc(intIn(a.e, 0, nE - 1, `${field}.e`), intIn(a.t, 0, L - 2, `${field}.t`));
+    }
+    return { n, edges, L, nE, N, m, mx, edgesAt, eq, vq, zc, xc, qubit, check, zSupport, xSupport, syndromeOf, patch, enforced, qubitIndex, checkIndex };
+  }
+
+  function intIn(v, lo, hi, field) {
+    if (!Number.isInteger(v)) throw new Error(`${field}: expected an integer, got ${JSON.stringify(v)}`);
+    if (v < lo || v > hi) throw new Error(`${field}: ${v} is out of range ${lo}..${hi}`);
+    return v;
+  }
+  function onlyKeys(obj, keys, field) {
+    for (const k of keys) if (!(k in obj)) throw new Error(`${field}: missing key '${k}'`);
+    for (const k of Object.keys(obj)) if (!keys.includes(k)) throw new Error(`${field}: unexpected key '${k}'`);
+  }
+
+  // ---------------------------------------------------------- graph quantities
+  function neighbours(n, edges) {
+    const nb = Array.from({ length: n }, () => []);
+    for (const [u, w] of edges) { nb[u].push(w); nb[w].push(u); }
+    return nb;
+  }
+  function ball(n, edges, s, r) {
+    const nb = neighbours(n, edges), dist = new Map([[s, 0]]), queue = [s];
+    for (let k = 0; k < queue.length; k++) {
+      const u = queue[k];
+      if (dist.get(u) === r) continue;
+      for (const w of nb[u]) if (!dist.has(w)) { dist.set(w, dist.get(u) + 1); queue.push(w); }
+    }
+    return [...dist.keys()].sort((a, b) => a - b);
+  }
+  function girth(n, edges) {
+    const nb = neighbours(n, edges);
+    let best = Infinity;
+    for (let s = 0; s < n; s++) {
+      const dist = new Array(n).fill(-1), parent = new Array(n).fill(-1), queue = [s];
+      dist[s] = 0;
+      for (let k = 0; k < queue.length; k++) {
+        const u = queue[k];
+        for (const w of nb[u]) {
+          if (dist[w] < 0) { dist[w] = dist[u] + 1; parent[w] = u; queue.push(w); }
+          else if (w !== parent[u]) best = Math.min(best, dist[u] + dist[w] + 1);
+        }
+      }
+    }
+    return best === Infinity ? null : best;
+  }
+  function connected(n, edges) {
+    return ball(n, edges, 0, n).length === n;
+  }
+  // alpha(G) by branching on 32-bit masks; null when n > 30
+  function alpha(n, edges) {
+    if (n > 30) return null;
+    const nb = new Array(n).fill(0);
+    for (const [u, w] of edges) { nb[u] |= 1 << w; nb[w] |= 1 << u; }
+    const pop = x => { x = x - ((x >>> 1) & 0x55555555); x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24; };
+    const memo = new Map();
+    function mis(S) {
+      if (S === 0) return 0;
+      if (memo.has(S)) return memo.get(S);
+      let bv = -1, bd = 99;
+      for (let v = 0; v < n; v++) if (S & (1 << v)) { const d = pop(nb[v] & S); if (d < bd) { bv = v; bd = d; } }
+      const without = (S & ~(1 << bv)) >>> 0;
+      let value = 1 + mis((without & ~nb[bv]) >>> 0);
+      if (bd > 1) value = Math.max(value, mis(without));
+      memo.set(S, value);
+      return value;
+    }
+    return mis(n === 32 ? 0xffffffff : ((1 << n) >>> 0) - 1);
+  }
+  // rank over F2 of rows given as lists of column indices
+  function rankF2(rowLists, ncols) {
+    const words = Math.ceil(ncols / 32);
+    const rows = rowLists.map(cols => { const r = new Uint32Array(words); for (const c of cols) r[c >> 5] ^= (1 << (c & 31)) >>> 0; return r; });
+    let rank = 0;
+    for (let c = 0; c < ncols && rank < rows.length; c++) {
+      const wd = c >> 5, bit = (1 << (c & 31)) >>> 0;
+      let p = -1;
+      for (let i = rank; i < rows.length; i++) if (rows[i][wd] & bit) { p = i; break; }
+      if (p < 0) continue;
+      [rows[rank], rows[p]] = [rows[p], rows[rank]];
+      for (let i = 0; i < rows.length; i++) if (i !== rank && (rows[i][wd] & bit)) for (let k = 0; k < words; k++) rows[i][k] ^= rows[rank][k];
+      rank++;
+    }
+    return rank;
+  }
+  function codeInfo(graph, L) {
+    const geo = makeGeometry(graph.n, graph.edges, L);
+    const hz = Array.from({ length: geo.m }, (_, i) => geo.zSupport(i));
+    const hx = Array.from({ length: geo.mx }, (_, k) => geo.xSupport(k));
+    return { n: graph.n, nE: geo.nE, L, N: geo.N, m: geo.m, x_checks: geo.mx,
+             k: geo.N - rankF2(hx, geo.N) - rankF2(hz, geo.N), girth: girth(graph.n, graph.edges) };
+  }
+
+  // ---------------------------------------------------------- specs
+  const bitRows = k => k > 0 ? Array.from({ length: 1 << k }, (_, i) => i.toString(2).padStart(k, "0")) : [];
+  function presetRows(name, k) {
+    if (name === "wire" && k === 2) return { "00": ["eq", 0], "01": ["ge", 1], "10": ["ge", 1], "11": ["eq", 0] };
+    if (name === "copy3" && k === 3) return Object.fromEntries(bitRows(3).map(a => [a, a === "000" || a === "111" ? ["eq", 0] : ["ge", 1]]));
+    return Object.fromEntries(bitRows(k).map(a => [a, ["any"]]));
+  }
+  function specProblems(spec, k) {
+    if (k === 0) return ["Choose at least one terminal"];
+    if (!spec) return ["Write a spec"];
+    if (!Object.values(spec.rows).some(e => e[0] === "eq")) return ["Add at least one eq row"];
+    return [];
+  }
+
+  // ---------------------------------------------------------- inputs_hash (mirrors gadgetlab/session.py)
+  function inputs(kind, s, params) {
+    const geo = makeGeometry(s.graph.n, s.graph.edges, s.L);
+    const syndrome = s.syndrome.map(a => geo.zc(a.e, a.t)).sort((a, b) => a - b);
+    const out = {
+      graph: { n: s.graph.n, edges: s.graph.edges.map(([u, w]) => [u, w]) },
+      L: s.L, scope: s.scope,
+      patch: s.scope === "local_closed" && s.patch ? { vertices: [...s.patch.vertices].sort((a, b) => a - b), layers: [s.patch.layers[0], s.patch.layers[1]] } : null,
+      kind,
+    };
+    const terminals = s.terminals.map(a => geo.qubitIndex(a));
+    const spec = s.spec ? s.spec.rows : null;
+    if (kind === "decode") out.syndrome = syndrome;
+    else if (kind === "table") Object.assign(out, { syndrome, terminals, spec });
+    else if (kind === "search") {
+      const region = s.region.map(a => geo.zc(a.e, a.t));
+      const inRegion = new Set(region);
+      const p = params || {};
+      Object.assign(out, {
+        syndrome_outside_region: syndrome.filter(i => !inRegion.has(i)), region, terminals, spec,
+        params: { budget: p.budget ?? null, seed: p.seed ?? null, top_k: p.top_k ?? null, max_weight: p.max_weight ?? null },
+      });
+    } else throw new Error(`unknown result kind ${kind}`);
+    return out;
+  }
+  const inputsHash = (kind, s, params) => hashInputs(inputs(kind, s, params));
+
+  // ---------------------------------------------------------- session validation (§5)
+  function circleLayout(n) {
+    return Object.fromEntries(Array.from({ length: n }, (_, v) => {
+      const a = (-90 + 360 * v / n) * Math.PI / 180;
+      return [String(v), [+(0.5 + 0.5 * Math.cos(a)).toFixed(4), +(0.5 + 0.5 * Math.sin(a)).toFixed(4)]];
+    }));
+  }
+  function validateSession(o) {
+    const fail = msg => { throw new Error(msg); };
+    const isObj = x => x !== null && typeof x === "object" && !Array.isArray(x);
+    if (!isObj(o)) fail("a session must be a JSON object");
+    if (o.schema !== SCHEMA) fail(`schema: expected "${SCHEMA}", got ${JSON.stringify(o.schema)}`);
+    for (const k of Object.keys(o)) if (!TOP_KEYS.includes(k)) fail(`session: unexpected key '${k}'`);
+    const g = o.graph;
+    if (!isObj(g)) fail("graph: expected an object");
+    const n = g.n;
+    if (!Number.isInteger(n) || n < 4 || n % 2) fail("graph.n: expected an even integer of at least 4");
+    if (!Array.isArray(g.edges)) fail("graph.edges: expected a list");
+    const edges = g.edges.map((e, k) => {
+      if (!Array.isArray(e) || e.length !== 2 || !e.every(Number.isInteger)) fail(`graph.edges[${k}]: expected [u, w]`);
+      if (!(0 <= e[0] && e[0] < e[1] && e[1] < n)) fail(`graph.edges[${k}]: expected 0 <= u < w < n`);
+      return [e[0], e[1]];
+    });
+    for (let k = 1; k < edges.length; k++) {
+      const [a, b] = edges[k - 1], [c, d] = edges[k];
+      if (!(a < c || (a === c && b < d))) fail("graph.edges: edges must be in canonical order, without repeats");
+    }
+    const deg = new Array(n).fill(0);
+    for (const [u, w] of edges) { deg[u]++; deg[w]++; }
+    deg.forEach((d, v) => { if (d !== 3) fail(`graph.edges: the graph is not cubic: vertex ${v} has degree ${d}`); });
+    if (!connected(n, edges)) fail("graph.edges: the graph is not connected");
+    let layout = g.layout;
+    if (layout === undefined || layout === null) layout = circleLayout(n);
+    if (!isObj(layout)) fail("graph.layout: expected an object");
+    for (let v = 0; v < n; v++) {
+      const p = layout[String(v)];
+      if (!Array.isArray(p) || p.length !== 2 || !p.every(c => typeof c === "number" && c >= 0 && c <= 1)) fail(`graph.layout.${v}: expected [x, y] in [0, 1]`);
+    }
+    const L = o.L;
+    if (!Number.isInteger(L) || L < 2 || L > 8) fail(`L: expected an integer between 2 and 8, got ${JSON.stringify(L)}`);
+    const geo = makeGeometry(n, edges, L);
+    const checkList = name => {
+      const v = o[name] ?? [];
+      if (!Array.isArray(v)) fail(`${name}: expected a list`);
+      const seen = new Set();
+      return v.map((a, k) => {
+        const i = geo.checkIndex(a, `${name}[${k}]`);
+        if (seen.has(i)) fail(`${name}[${k}]: this check appears twice`);
+        seen.add(i);
+        return geo.check(i);
+      });
+    };
+    const syndrome = checkList("syndrome").sort((a, b) => geo.zc(a.e, a.t) - geo.zc(b.e, b.t));
+    const region = checkList("region");
+    const tv = o.terminals ?? [];
+    if (!Array.isArray(tv)) fail("terminals: expected a list");
+    if (tv.length > 6) fail("terminals: at most 6 terminals");
+    const tseen = new Set();
+    const terminals = tv.map((a, k) => {
+      const j = geo.qubitIndex(a, `terminals[${k}]`);
+      if (tseen.has(j)) fail(`terminals[${k}]: this qubit is already a terminal`);
+      tseen.add(j);
+      return geo.qubit(j);
+    });
+    const scope = o.scope ?? "global";
+    if (scope !== "global" && scope !== "local_closed") fail(`scope: expected "global" or "local_closed"`);
+    let patch = null;
+    if (o.patch !== undefined && o.patch !== null) {
+      const p = o.patch;
+      if (!isObj(p) || !Array.isArray(p.vertices) || !Array.isArray(p.layers) || p.layers.length !== 2) fail("patch: expected {vertices, layers}");
+      const vs = p.vertices.map((v, k) => intIn(v, 0, n - 1, `patch.vertices[${k}]`));
+      if (new Set(vs).size !== vs.length) fail("patch.vertices: a vertex appears twice");
+      const l0 = intIn(p.layers[0], 0, L - 1, "patch.layers[0]"), l1 = intIn(p.layers[1], 0, L - 1, "patch.layers[1]");
+      if (l0 > l1) fail("patch.layers: need l0 <= l1");
+      patch = { vertices: vs.sort((a, b) => a - b), layers: [l0, l1] };
+    }
+    let spec = null;
+    if (o.spec !== undefined && o.spec !== null) {
+      const sp = o.spec;
+      if (!isObj(sp) || !isObj(sp.rows)) fail("spec: expected {preset, rows}");
+      const preset = sp.preset ?? "custom";
+      if (!["wire", "copy3", "custom"].includes(preset)) fail("spec.preset: expected wire, copy3 or custom");
+      const want = bitRows(terminals.length);
+      const keys = Object.keys(sp.rows);
+      if (keys.length !== want.length || !want.every(a => a in sp.rows)) fail(`spec.rows: expected one row per assignment of the ${terminals.length} terminals`);
+      const rows = {};
+      for (const a of want) {
+        const e = sp.rows[a];
+        if (!Array.isArray(e)) fail(`spec.rows.${a}: expected an entry`);
+        if (e[0] === "any" && e.length === 1) rows[a] = ["any"];
+        else if ((e[0] === "eq" || e[0] === "ge") && e.length === 2 && Number.isInteger(e[1]) && e[1] >= 0) rows[a] = [e[0], e[1]];
+        else fail(`spec.rows.${a}: expected ["eq", k], ["ge", k] or ["any"]`);
+      }
+      spec = { preset, rows };
+    }
+    const results = { decode: null, table: null, search: null };
+    if (o.results !== undefined && o.results !== null) {
+      if (!isObj(o.results)) fail("results: expected an object");
+      const need = { decode: ["status", "cost", "error", "inputs_hash"], table: ["terminals", "rows", "unconstrained_cost", "match", "inputs_hash"],
+                     search: ["params", "summary", "matches", "inputs_hash"] };
+      for (const k of Object.keys(o.results)) {
+        if (!(k in need)) fail(`results: unexpected key '${k}'`);
+        const r = o.results[k];
+        if (r === null) continue;
+        if (!isObj(r)) fail(`results.${k}: expected an object`);
+        for (const key of need[k]) if (!(key in r)) fail(`results.${k}: missing key '${key}'`);
+        results[k] = r;
+      }
+    }
+    const notes = o.notes ?? "";
+    if (typeof notes !== "string") fail("notes: expected a string");
+    return {
+      schema: SCHEMA,
+      graph: { preset: g.preset ?? "custom", seed: g.seed ?? null, n, edges, layout: JSON.parse(JSON.stringify(layout)) },
+      L, syndrome, terminals, scope, patch, region, spec, results: JSON.parse(JSON.stringify(results)), notes,
+    };
+  }
+
+  return { SCHEMA, sha256Hex, canon, hashInputs, makeGeometry, ball, girth, connected, alpha, rankF2, codeInfo,
+           bitRows, presetRows, specProblems, inputs, inputsHash, validateSession, circleLayout };
+})();
+if (typeof module !== "undefined") module.exports = Core;
+</script>
+
+<script id="selftest-data" type="application/json">
+/*SELFTEST-BEGIN*/{"n":4,"edges":[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],"L":3,"t4":[{"qubit":{"q":"E","e":0,"l":0},"fires":[{"e":0,"t":0}]},{"qubit":{"q":"E","e":0,"l":1},"fires":[{"e":0,"t":0},{"e":0,"t":1}]},{"qubit":{"q":"E","e":0,"l":2},"fires":[{"e":0,"t":1}]},{"qubit":{"q":"E","e":1,"l":0},"fires":[{"e":1,"t":0}]},{"qubit":{"q":"E","e":1,"l":1},"fires":[{"e":1,"t":0},{"e":1,"t":1}]},{"qubit":{"q":"E","e":1,"l":2},"fires":[{"e":1,"t":1}]},{"qubit":{"q":"E","e":2,"l":0},"fires":[{"e":2,"t":0}]},{"qubit":{"q":"E","e":2,"l":1},"fires":[{"e":2,"t":0},{"e":2,"t":1}]},{"qubit":{"q":"E","e":2,"l":2},"fires":[{"e":2,"t":1}]},{"qubit":{"q":"E","e":3,"l":0},"fires":[{"e":3,"t":0}]},{"qubit":{"q":"E","e":3,"l":1},"fires":[{"e":3,"t":0},{"e":3,"t":1}]},{"qubit":{"q":"E","e":3,"l":2},"fires":[{"e":3,"t":1}]},{"qubit":{"q":"E","e":4,"l":0},"fires":[{"e":4,"t":0}]},{"qubit":{"q":"E","e":4,"l":1},"fires":[{"e":4,"t":0},{"e":4,"t":1}]},{"qubit":{"q":"E","e":4,"l":2},"fires":[{"e":4,"t":1}]},{"qubit":{"q":"E","e":5,"l":0},"fires":[{"e":5,"t":0}]},{"qubit":{"q":"E","e":5,"l":1},"fires":[{"e":5,"t":0},{"e":5,"t":1}]},{"qubit":{"q":"E","e":5,"l":2},"fires":[{"e":5,"t":1}]},{"qubit":{"q":"V","v":0,"t":0},"fires":[{"e":0,"t":0},{"e":1,"t":0},{"e":2,"t":0}]},{"qubit":{"q":"V","v":0,"t":1},"fires":[{"e":0,"t":1},{"e":1,"t":1},{"e":2,"t":1}]},{"qubit":{"q":"V","v":1,"t":0},"fires":[{"e":0,"t":0},{"e":3,"t":0},{"e":4,"t":0}]},{"qubit":{"q":"V","v":1,"t":1},"fires":[{"e":0,"t":1},{"e":3,"t":1},{"e":4,"t":1}]},{"qubit":{"q":"V","v":2,"t":0},"fires":[{"e":1,"t":0},{"e":3,"t":0},{"e":5,"t":0}]},{"qubit":{"q":"V","v":2,"t":1},"fires":[{"e":1,"t":1},{"e":3,"t":1},{"e":5,"t":1}]},{"qubit":{"q":"V","v":3,"t":0},"fires":[{"e":2,"t":0},{"e":4,"t":0},{"e":5,"t":0}]},{"qubit":{"q":"V","v":3,"t":1},"fires":[{"e":2,"t":1},{"e":4,"t":1},{"e":5,"t":1}]}],"session":{"schema":"gadgetlab.session/1","graph":{"preset":"k4","seed":null,"n":4,"edges":[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],"layout":{"0":[0.5,0.08],"1":[0.933,0.83],"2":[0.067,0.83],"3":[0.5,0.58]}},"L":3,"syndrome":[{"e":0,"t":0},{"e":3,"t":1},{"e":5,"t":0}],"terminals":[{"q":"E","e":1,"l":1},{"q":"V","v":2,"t":0}],"scope":"local_closed","patch":{"vertices":[0,2],"layers":[0,2]},"region":[{"e":2,"t":1},{"e":0,"t":0},{"e":4,"t":0}],"spec":{"preset":"custom","rows":{"00":["eq",0],"01":["ge",2],"10":["any"],"11":["eq",1]}},"results":{"decode":null,"table":null,"search":null},"notes":""},"search_params":{"budget":100,"seed":7,"top_k":5,"max_weight":null},"hashes":{"decode":"2a2a310b7d9c9984","table":"47a9d675c9707b81","search":"78f2c1d621c48b32"}}/*SELFTEST-END*/
+</script>
+
+<script id="app">
+"use strict";
+(() => {
+  if (typeof document === "undefined") return;
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const NAMES = { k4: "K4", k33: "K3,3", prism: "Prism", cube: "Cube", petersen: "Petersen", heawood: "Heawood", random_cubic: "Random cubic", custom: "Custom graph" };
+  const TOOLS = ["syndrome", "terminals", "region", "patch"];
+  const HINTS = {
+    syndrome: "Click a check, an edge in a gap panel, to toggle σ.",
+    terminals: "Click a qubit, an edge in a layer panel or a vertex in a gap panel, to add or remove a terminal.",
+    region: "Click a check, an edge in a gap panel, to add it to the region or remove it.",
+    patch: "Click a vertex in any panel to add it to the patch vertex set U or remove it.",
+  };
+  const params = new URLSearchParams(location.search);
+  const fmtCost = c => c === null || c === undefined ? "—" : String(c);
+  const fmtMargin = m => m === null || m === undefined ? "∞" : String(m);
+
+  const S = {
+    live: false, config: { r0_preset: false, debug: true }, staticReason: "",
+    session: null, tool: "syndrome", shown: null, syndromeLabel: null, flash: false,
+    undo: [], redo: [], busy: {}, errors: {}, notices: {}, job: null, lastJob: null,
+    infoCache: new Map(), distances: new Map(), drag: null,
+  };
+  let D = null;
+  const geoCache = new Map();
+
+  // ---------------------------------------------------------- derived state
+  const graphKey = s => `${s.graph.n}|${JSON.stringify(s.graph.edges)}|${s.L}`;
+  function geometry(s) {
+    const key = graphKey(s);
+    if (!geoCache.has(key)) geoCache.set(key, Core.makeGeometry(s.graph.n, s.graph.edges, s.L));
+    return geoCache.get(key);
+  }
+  function info(s) {
+    const key = graphKey(s);
+    if (!S.infoCache.has(key)) S.infoCache.set(key, { ...Core.codeInfo(s.graph, s.L), name: NAMES[s.graph.preset] || s.graph.preset, local: true });
+    return S.infoCache.get(key);
+  }
+  function derive() {
+    const s = S.session;
+    if (!s) return null;
+    const geo = geometry(s);
+    const sigma = new Set(s.syndrome.map(a => geo.zc(a.e, a.t)));
+    const region = s.region.map(a => geo.zc(a.e, a.t));
+    const regionPos = new Map(region.map((i, k) => [i, k]));
+    const terms = s.terminals.map(a => geo.qubitIndex(a));
+    const termPos = new Map(terms.map((j, k) => [j, k]));
+    const U = new Set(s.patch ? s.patch.vertices : []);
+    const Q = s.patch ? new Set(geo.patch(s.patch.vertices, s.patch.layers[0], s.patch.layers[1])) : null;
+    const local = s.scope === "local_closed";
+    const enforced = local ? (Q ? geo.enforced(Q) : new Set()) : null;
+    const r = s.results;
+    const current = {
+      decode: !!r.decode && r.decode.inputs_hash === Core.inputsHash("decode", s),
+      table: !!r.table && r.table.inputs_hash === Core.inputsHash("table", s),
+      search: !!r.search && r.search.inputs_hash === Core.inputsHash("search", s, r.search.params),
+    };
+    const d = { s, geo, sigma, region, regionPos, terms, termPos, U, Q, local, enforced, current, err: new Set(), witness: null };
+    d.witness = shownWitness(d);
+    if (d.witness) d.err = d.witness.ones;
+    return d;
+  }
+  function shownWitness(d) {
+    const sh = S.shown, r = d.s.results;
+    if (!sh) return null;
+    let row = null, label;
+    if (sh.kind === "decode" && r.decode && d.current.decode) { row = r.decode; label = "decode"; }
+    else if (sh.kind === "table" && r.table && d.current.table) { row = r.table.rows.find(x => x.a === sh.a) || null; label = `cost table row ${sh.a}`; }
+    if (!row || row.status !== "optimal" || !row.error) return null;
+    const ones = new Set(row.error.map(a => d.geo.qubitIndex(a)));
+    return { ones, cost: row.cost, a: sh.kind === "table" ? sh.a : null, label, check: checkWitness(d, ones, row.cost, sh.kind === "table" ? sh.a : null) };
+  }
+  // V5: recompute the witness syndrome from the §3.5 supports, independently of the engine
+  function checkWitness(d, ones, cost, a) {
+    const fired = d.geo.syndromeOf(ones);
+    const checks = d.enforced ? [...d.enforced].sort((x, y) => x - y) : Array.from({ length: d.geo.m }, (_, i) => i);
+    const mismatched = checks.filter(i => fired.has(i) !== d.sigma.has(i));
+    const outside = d.Q ? [...ones].filter(j => !d.Q.has(j)) : [];
+    const termBad = a === null ? [] : d.terms.filter((j, k) => (ones.has(j) ? "1" : "0") !== a[k]);
+    const weight = d.Q ? [...ones].filter(j => d.Q.has(j)).length : ones.size;
+    return { checked: checks.length, mismatched, outside, termBad, weightOk: weight === cost,
+             ok: !mismatched.length && !outside.length && !termBad.length && weight === cost };
+  }
+
+  // ---------------------------------------------------------- text
+  function describeQubit(geo, j) {
+    const a = geo.qubit(j);
+    if (a.q === "E") { const [u, w] = geo.edges[a.e]; return `Edge-qubit e = ${a.e} (${u}–${w}), l = ${a.l}`; }
+    return `Vertex-qubit v = ${a.v}, t = ${a.t}`;
+  }
+  function describeCheck(geo, i) {
+    const { e, t } = geo.check(i), [u, w] = geo.edges[e];
+    return `Z-check e = ${e} (${u}–${w}), t = ${t}`;
+  }
+  const addrQubit = a => a.q === "E" ? `(E, e = ${a.e}, l = ${a.l})` : `(V, v = ${a.v}, t = ${a.t})`;
+
+  // ---------------------------------------------------------- editing, undo and redo
+  const inputsOf = s => JSON.stringify({ graph: s.graph, L: s.L, syndrome: s.syndrome, terminals: s.terminals, scope: s.scope,
+                                         patch: s.patch, region: s.region, spec: s.spec, notes: s.notes });
+  function restoreInputs(text) { Object.assign(S.session, JSON.parse(text)); }
+  function edit(fn, opts = {}) {
+    const s = S.session;
+    if (!s) return;
+    const before = inputsOf(s), synBefore = JSON.stringify(s.syndrome), k = s.terminals.length;
+    fn(s);
+    if (inputsOf(s) === before) { render(); return; }
+    S.undo.push(before);
+    if (S.undo.length > 50) S.undo.shift();
+    S.redo = [];
+    if (s.terminals.length !== k) {
+      s.spec = { preset: "custom", rows: Core.presetRows("custom", s.terminals.length) };
+      S.notices.spec = "Spec reset to custom because the number of terminals changed.";
+    }
+    if (opts.label !== undefined) S.syndromeLabel = opts.label;
+    else if (JSON.stringify(s.syndrome) !== synBefore) S.syndromeLabel = null;
+    render();
+  }
+  function undo() {
+    if (!S.undo.length || !S.session) return;
+    S.redo.push(inputsOf(S.session));
+    restoreInputs(S.undo.pop());
+    S.syndromeLabel = null;
+    render();
+  }
+  function redo() {
+    if (!S.redo.length || !S.session) return;
+    S.undo.push(inputsOf(S.session));
+    restoreInputs(S.redo.pop());
+    S.syndromeLabel = null;
+    render();
+  }
+  function adopt(session, serverInfo, message) {
+    if (S.session) { S.undo.push(inputsOf(S.session)); if (S.undo.length > 50) S.undo.shift(); S.redo = []; }
+    S.session = session;
+    if (serverInfo) S.infoCache.set(graphKey(session), { ...serverInfo, local: false });
+    S.shown = session.results.decode ? { kind: "decode" } : null;
+    S.syndromeLabel = null;
+    S.notices = {};
+    S.errors = {};
+    S.lastJob = null;
+    if (message) S.notices.build = message;
+    syncGraphControls();
+    render();
+  }
+
+  const sortChecks = (geo, list) => list.sort((a, b) => geo.zc(a.e, a.t) - geo.zc(b.e, b.t));
+  function toggleCheckIn(listName, i) {
+    edit(s => {
+      const geo = geometry(s), a = geo.check(i);
+      const k = s[listName].findIndex(x => x.e === a.e && x.t === a.t);
+      if (k >= 0) s[listName].splice(k, 1); else s[listName].push(a);
+      if (listName === "syndrome") sortChecks(geo, s.syndrome);
+    });
+  }
+  function toggleTerminal(j) {
+    const s = S.session, geo = geometry(s);
+    const k = s.terminals.findIndex(a => geo.qubitIndex(a) === j);
+    if (k < 0 && s.terminals.length >= 6) { S.notices.left = "At most 6 terminals."; render(); return; }
+    S.notices.left = null;
+    edit(s2 => { if (k >= 0) s2.terminals.splice(k, 1); else s2.terminals.push(geo.qubit(j)); });
+  }
+  function moveTerminal(k, dir) {
+    edit(s => { const j = k + dir; if (j < 0 || j >= s.terminals.length) return; [s.terminals[k], s.terminals[j]] = [s.terminals[j], s.terminals[k]]; });
+  }
+  function togglePatchVertex(v) {
+    edit(s => {
+      if (!s.patch) s.patch = { vertices: [], layers: [0, s.L - 1] };
+      const k = s.patch.vertices.indexOf(v);
+      if (k >= 0) s.patch.vertices.splice(k, 1); else s.patch.vertices.push(v);
+      s.patch.vertices.sort((a, b) => a - b);
+    });
+  }
+
+  // ---------------------------------------------------------- engine calls
+  async function api(path, body) {
+    const opts = body === undefined ? { method: "GET" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    const res = await fetch(path, opts);
+    let data;
+    try { data = await res.json(); } catch (_) { data = { error: `HTTP ${res.status}` }; }
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+  const forApi = () => ({ ...S.session, results: { decode: null, table: null, search: null } });
+  async function run(key, fn) {
+    S.busy[key] = true; S.errors[key] = null; render();
+    try { await fn(); } catch (e) { S.errors[key] = e.message; }
+    S.busy[key] = false; render();
+  }
+  function graphRequest() {
+    const preset = $("#g-preset").value;
+    if (preset === "random_cubic") return { preset, n: parseInt($("#g-n").value, 10), seed: parseInt($("#g-seed").value, 10) };
+    if (preset === "custom") {
+      const nums = ($("#g-edges").value.match(/\d+/g) || []).map(Number);
+      if (nums.length % 2) throw new Error("The edge list has an odd number of vertex labels.");
+      return { preset: "custom", edges: Array.from({ length: nums.length / 2 }, (_, k) => [nums[2 * k], nums[2 * k + 1]]) };
+    }
+    return { preset };
+  }
+  const newSession = () => run("build", async () => {
+    const data = await api("/api/build", { graph: graphRequest(), L: parseInt($("#g-L").value, 10) });
+    adopt(data.session, data.info);
+  });
+  const decode = () => run("decode", async () => {
+    S.session.results.decode = await api("/api/decode", forApi());
+    S.shown = { kind: "decode" };
+  });
+  const computeTable = () => run("table", async () => {
+    S.session.results.table = await api("/api/table", forApi());
+  });
+  const computeDistances = () => run("distances", async () => {
+    const key = graphKey(S.session);
+    S.distances.set(key, await api("/api/distances", forApi()));
+  });
+  const randomSyndrome = () => run("random", async () => {
+    const weight = parseInt($("#rs-weight").value, 10), seed = parseInt($("#rs-seed").value, 10);
+    const data = await api("/api/random_syndrome", { ...forApi(), weight, seed });
+    edit(s => { s.syndrome = sortChecks(geometry(s), data.syndrome); }, { label: `Random syndrome, weight ${weight}, seed ${seed}` });
+  });
+  function searchParams() {
+    const int = (id, dflt) => { const v = $(id).value.trim(); return v === "" ? dflt : Number(v); };
+    return { budget: int("#p-budget", 4096), seed: int("#p-sseed", 0), top_k: int("#p-topk", 50), max_weight: int("#p-maxw", null), workers: int("#p-workers", null) };
+  }
+  async function runSearch() {
+    S.errors.search = null;
+    const p = searchParams();
+    for (const [k, v] of Object.entries(p)) if (v !== null && (!Number.isInteger(v) || v < 0)) { S.errors.search = `${k.replace("_", " ")} must be a non-negative integer`; render(); return; }
+    S.busy.search = true; S.lastJob = null; render();
+    try {
+      const { job_id } = await api("/api/search", { ...forApi(), ...p });
+      S.job = { id: job_id, state: "running", progress: { done: 0, total: 0 }, summary: null };
+      render();
+      poll();
+    } catch (e) { S.errors.search = e.message; S.busy.search = false; render(); }
+  }
+  async function poll() {
+    if (!S.job) return;
+    try {
+      const snap = await api(`/api/jobs/${S.job.id}`);
+      Object.assign(S.job, snap);
+      if (snap.state === "running") { setTimeout(poll, 250); renderSearch(); return; }
+      if (snap.state === "done") S.session.results.search = snap.result;
+      if (snap.state === "error") S.errors.search = `Search failed: ${snap.error}`;
+      S.lastJob = { state: snap.state, summary: snap.summary, progress: snap.progress };
+    } catch (e) { S.errors.search = e.message; }
+    S.job = null; S.busy.search = false;
+    render();
+  }
+  async function cancelSearch() {
+    if (!S.job) return;
+    try { await api(`/api/jobs/${S.job.id}/cancel`, {}); } catch (e) { S.errors.search = e.message; }
+  }
+  function loadResult(rank) {
+    const r = S.session.results.search, m = r.matches.find(x => x.rank === rank);
+    if (!m) return;
+    const geo = geometry(S.session);
+    edit(s => {
+      const on = new Set(s.syndrome.map(a => geo.zc(a.e, a.t)));
+      s.region.forEach((a, k) => { const i = geo.zc(a.e, a.t); if (m.pattern[k] === "1") on.add(i); else on.delete(i); });
+      s.syndrome = [...on].sort((x, y) => x - y).map(i => geo.check(i));
+    }, { label: `From search result ${rank}` });
+    S.session.results.table = JSON.parse(JSON.stringify(m.table));
+    S.shown = null;
+    flash();
+    render();
+  }
+  function flash() {
+    S.flash = true;
+    setTimeout(() => { S.flash = false; $("#panels").classList.remove("flash"); }, 800);
+  }
+
+  // ---------------------------------------------------------- sessions on disk
+  function saveSession() {
+    const s = S.session, text = JSON.stringify(s, null, 2) + "\n";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    a.download = `${s.graph.preset}_L${s.L}.session.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+  async function openFile(file) {
+    let session;
+    try {
+      session = Core.validateSession(JSON.parse(await file.text()));
+    } catch (e) {
+      S.notices.build = null;
+      S.errors.build = `Cannot open ${file.name}: ${e.message}`;
+      render();
+      return;
+    }
+    let serverInfo = null;
+    if (S.live) {
+      try {
+        serverInfo = (await api("/api/build", { graph: session.graph, L: session.L })).info;
+      } catch (e) { S.errors.build = `Cannot open ${file.name}: ${e.message}`; render(); return; }
+    }
+    adopt(session, serverInfo, `Opened ${file.name}`);
+  }
+
+  // ---------------------------------------------------------- rendering
+  function render() {
+    D = derive();
+    renderTop();
+    renderLeft();
+    renderCanvas();
+    renderRight();
+  }
+  const setText = (sel, text) => { const el = $(sel); if (el.textContent !== text) el.textContent = text; };
+  function setValue(el, v) { if (document.activeElement !== el && el.value !== String(v)) el.value = String(v); }
+
+  function renderTop() {
+    const s = S.session;
+    const fields = ["n", "N", "m", "k", "girth", "dX", "dZ"];
+    if (!s) { setText("#title", "GadgetLab"); fields.forEach(f => setText(`#i-${f}`, "—")); }
+    else {
+      const i = info(s);
+      setText("#title", `${s.graph.preset === "random_cubic" ? `Random cubic (seed ${s.graph.seed})` : (NAMES[s.graph.preset] || s.graph.preset)}, L = ${s.L}`);
+      setText("#i-n", String(i.n)); setText("#i-N", String(i.N)); setText("#i-m", String(i.m));
+      setText("#i-k", String(i.k)); setText("#i-girth", i.girth === null ? "—" : String(i.girth));
+      const d = S.distances.get(graphKey(s));
+      setText("#i-dX", d ? String(d.dX) : "—"); setText("#i-dZ", d ? String(d.dZ) : "—");
+    }
+    const tooBig = s && info(s).N > 60;
+    $("#btn-distances").disabled = !S.live || !s || tooBig || !!S.busy.distances;
+    setText("#dist-note", S.errors.distances ? `Distances failed: ${S.errors.distances}` : tooBig ? "Distances are computed only when N ≤ 60." : S.busy.distances ? "Computing…" : "");
+    setText("#mode-line", S.live ? `Live mode, engine at ${location.host}` : "Static mode");
+    const st = $("#static-line");
+    st.hidden = S.live;
+    st.textContent = S.live ? "" : S.staticReason;
+  }
+
+  function renderLeft() {
+    const s = S.session;
+    $$(".tools button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === S.tool)));
+    setText("#tool-hint", HINTS[S.tool]);
+    for (const id of ["#btn-new", "#btn-random"]) $(id).disabled = !S.live || !!S.busy.build || !!S.busy.random || (id === "#btn-random" && !s);
+    $("#btn-save").disabled = !s;
+    $("#btn-undo").disabled = !S.undo.length;
+    $("#btn-redo").disabled = !S.redo.length;
+    $("#btn-fill-gap0").hidden = !S.config.r0_preset;
+    const bm = $("#build-msg");
+    bm.innerHTML = S.errors.build ? `<p class="err">${esc(S.errors.build)}</p>` : S.notices.build ? `<p class="notice">${esc(S.notices.build)}</p>` : "";
+    const lm = $("#left-msg");
+    lm.innerHTML = [S.errors.random ? `<p class="err">Random syndrome failed: ${esc(S.errors.random)}</p>` : "",
+                    S.notices.left ? `<p class="notice">${esc(S.notices.left)}</p>` : ""].join("");
+    const editing = ["#btn-clear-syn", "#btn-clear-region", "#btn-clear-terms", "#btn-ball", "#btn-clear-patch", "#btn-fill-gap0", "#p-l0", "#p-l1", "#p-centre", "#p-radius", "#notes"];
+    editing.forEach(id => { $(id).disabled = !s; });
+    $$('input[name="scope"]').forEach(r => { r.disabled = !s; });
+    if (!s) return;
+    setText("#s-count", String(s.syndrome.length));
+    setText("#r-count", String(s.region.length));
+    setText("#t-count", String(s.terminals.length));
+    $$('input[name="scope"]').forEach(r => { r.checked = r.value === s.scope; });
+    const layerOpts = Array.from({ length: s.L }, (_, l) => `<option value="${l}">${l}</option>`).join("");
+    for (const id of ["#p-l0", "#p-l1"]) if ($(id).options.length !== s.L) $(id).innerHTML = layerOpts;
+    const layers = s.patch ? s.patch.layers : [0, s.L - 1];
+    setValue($("#p-l0"), layers[0]); setValue($("#p-l1"), layers[1]);
+    if ($("#p-centre").options.length !== s.graph.n) $("#p-centre").innerHTML = Array.from({ length: s.graph.n }, (_, v) => `<option value="${v}">vertex ${v}</option>`).join("");
+    const nq = D.Q ? D.Q.size : 0;
+    let summary = s.patch && s.patch.vertices.length
+      ? `Patch vertices ${s.patch.vertices.join(", ")}; ${nq} qubits, ${D.enforced ? D.enforced.size : geometry(s).enforced(D.Q).size} enforced checks.`
+      : "Patch: no vertices yet. Use Patch mode (key 4) or the ball helper.";
+    if (s.scope === "global" && s.patch && s.patch.vertices.length) summary += " Not used in global scope.";
+    if (s.scope === "local_closed" && !(s.patch && s.patch.vertices.length)) summary += " local_closed scope needs a patch.";
+    setText("#patch-summary", summary);
+    setValue($("#notes"), s.notes);
+  }
+
+  function renderCanvas() {
+    const s = S.session, panels = $("#panels"), empty = $("#empty");
+    panels.className = `${$('input[name="arrange"]:checked').value} tool-${S.tool}${S.flash ? " flash" : ""}`;
+    if (!s) {
+      panels.innerHTML = "";
+      empty.hidden = false;
+      empty.innerHTML = S.live ? `<p>Building a session…</p>` : `<p>${esc(S.staticReason)}</p><p><button type="button" id="btn-open2">Open session</button></p>`;
+      const b = $("#btn-open2");
+      if (b) b.onclick = () => $("#file-open").click();
+      $("#canvas-head").textContent = "";
+      return;
+    }
+    empty.hidden = true;
+    const out = [];
+    for (let l = 0; l < s.L; l++) {
+      out.push(panel("layer", l));
+      if (l < s.L - 1) out.push(panel("gap", l));
+    }
+    panels.innerHTML = out.join("");
+    renderCanvasHead();
+  }
+
+  function renderCanvasHead() {
+    const head = $("#canvas-head"), parts = [];
+    parts.push(`<span>${esc(`${S.tool[0].toUpperCase()}${S.tool.slice(1)} mode.`)} ${esc(HINTS[S.tool])}</span>`);
+    if (S.syndromeLabel) parts.push(`<span class="from">${esc(S.syndromeLabel)}</span>`);
+    const w = D.witness;
+    if (w) {
+      const c = w.check;
+      const what = c.ok ? `syndrome verified on ${c.checked} ${D.local ? "enforced " : ""}checks` : "witness does not verify";
+      parts.push(`<span>Showing the witness of the ${esc(w.label)}, weight ${w.cost}: ${what}.</span>`);
+    } else if (S.shown) {
+      parts.push(`<span class="muted">The selected witness is hidden because its result is stale.</span>`);
+    }
+    head.innerHTML = parts.join("");
+  }
+
+  const SIZE = 252, MARGIN = 28;
+  function panel(kind, idx) {
+    const s = S.session, geo = D.geo, inner = SIZE - 2 * MARGIN;
+    const P = v => { const p = s.graph.layout[String(v)]; return [MARGIN + p[0] * inner, MARGIN + p[1] * inner]; };
+    const pts = Array.from({ length: s.graph.n }, (_, v) => P(v));
+    const gaps = freeDirections(pts, geo);
+    const f = x => x.toFixed(1);
+    const seg = (e, cls, attrs = "") => { const [u, w] = geo.edges[e]; return `<line class="${cls}" x1="${f(pts[u][0])}" y1="${f(pts[u][1])}" x2="${f(pts[w][0])}" y2="${f(pts[w][1])}"${attrs}/>`; };
+    const shade = [], halos = [], lines = [], dots = [], labels = [], badges = [], hits = [];
+    let fired = 0, errors = 0;
+    const badge = (x, y, k) => `<g class="badge"><circle cx="${f(x)}" cy="${f(y)}" r="9"/><text x="${f(x)}" y="${f(y + 0.5)}">${k}</text></g>`;
+    for (let e = 0; e < geo.nE; e++) {
+      const [u, w] = geo.edges[e];
+      if (kind === "layer") {
+        const q = geo.eq(e, idx);
+        if (D.Q && D.Q.has(q)) shade.push(seg(e, "patch-e"));
+        if (D.err.has(q)) errors++;
+        lines.push(seg(e, D.err.has(q) ? "q-err" : "q-idle"));
+        if (D.termPos.has(q)) {
+          const [x1, y1] = pts[u], [x2, y2] = pts[w], len = Math.hypot(x2 - x1, y2 - y1) || 1;
+          badges.push(badge((x1 + x2) / 2 - (y2 - y1) / len * 11, (y1 + y2) / 2 + (x2 - x1) / len * 11, D.termPos.get(q) + 1));
+        }
+        hits.push(seg(e, "hit", ` data-k="eq" data-j="${q}"`));
+      } else {
+        const i = geo.zc(e, idx);
+        if (D.regionPos.has(i)) halos.push(seg(e, "halo"));
+        if (D.sigma.has(i)) fired++;
+        lines.push(seg(e, D.sigma.has(i) ? "c-on" : "c-idle"));
+        hits.push(seg(e, "hit", ` data-k="zc" data-i="${i}"`));
+      }
+    }
+    const showLabels = $("#show-labels").checked;
+    for (let v = 0; v < s.graph.n; v++) {
+      const [x, y] = pts[v];
+      if (D.U.has(v)) dots.push(`<circle class="u-ring" cx="${f(x)}" cy="${f(y)}" r="9"/>`);
+      if (kind === "layer") {
+        dots.push(`<circle class="vx" cx="${f(x)}" cy="${f(y)}" r="3.5"/>`);
+        hits.push(`<circle class="hit" data-k="vx" data-v="${v}" data-l="${idx}" cx="${f(x)}" cy="${f(y)}" r="9"/>`);
+      } else {
+        const q = geo.vq(v, idx);
+        if (D.Q && D.Q.has(q)) shade.push(`<circle class="patch-v" cx="${f(x)}" cy="${f(y)}" r="12"/>`);
+        if (D.err.has(q)) errors++;
+        dots.push(D.err.has(q) ? `<circle class="vq-err" cx="${f(x)}" cy="${f(y)}" r="7.5"/>` : `<circle class="vq" cx="${f(x)}" cy="${f(y)}" r="4.5"/>`);
+        if (D.termPos.has(q)) { const [ux, uy] = gaps[v][0]; badges.push(badge(x + ux * 18, y + uy * 18, D.termPos.get(q) + 1)); }
+        hits.push(`<circle class="hit" data-k="vq" data-j="${q}" data-v="${v}" cx="${f(x)}" cy="${f(y)}" r="9"/>`);
+      }
+      if (showLabels) {
+        const busy = kind === "gap" && D.termPos.has(geo.vq(v, idx));
+        const [ux, uy] = gaps[v][busy ? 1 : 0];
+        labels.push(`<text class="vlabel" x="${f(x + ux * 13)}" y="${f(y + uy * 13)}">${v}</text>`);
+      }
+    }
+    const title = kind === "layer" ? `<b>Layer ${idx}</b>: edges are qubits` : `<b>Gap ${idx}</b>: edges are checks, vertices are qubits`;
+    const aria = kind === "layer" ? `Layer ${idx}: edges are qubits; ${errors} in error` : `Gap ${idx}: edges are checks, vertices are qubits; ${fired} fired checks, ${errors} vertex-qubits in error`;
+    return `<figure class="panel"><figcaption>${title}</figcaption><svg viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" role="img" aria-label="${esc(aria)}" data-kind="${kind}" data-index="${idx}">` +
+      shade.join("") + halos.join("") + lines.join("") + dots.join("") + labels.join("") + badges.join("") + hits.join("") + `</svg></figure>`;
+  }
+
+  // per vertex, unit vectors bisecting the free angles between its edges, widest first
+  function freeDirections(pts, geo) {
+    return pts.map(([x, y], v) => {
+      const angles = geo.edgesAt[v].map(e => { const [a, b] = geo.edges[e], w = a === v ? b : a; return Math.atan2(pts[w][1] - y, pts[w][0] - x); }).sort((a, b) => a - b);
+      const gaps = angles.map((a, k) => { const next = k + 1 < angles.length ? angles[k + 1] : angles[0] + 2 * Math.PI; return [next - a, a + (next - a) / 2]; });
+      gaps.sort((a, b) => b[0] - a[0]);
+      return gaps.map(([, mid]) => [Math.cos(mid), Math.sin(mid)]).concat([[0, -1], [0, 1]]);
+    });
+  }
+
+  function staleNote(kind) {
+    const what = { decode: "the syndrome, scope or patch", table: "the syndrome, terminals, scope, patch or spec", search: "the syndrome outside the region, the region, terminals, scope, patch or spec" }[kind];
+    return `<p class="stale-label">Stale: ${what} changed after this result was computed. It is not the current result; compute it again.</p>`;
+  }
+  function busyNote(key, text) { return S.busy[key] ? `<p class="small muted">${text}</p>` : ""; }
+  function errorNote(key, prefix) { return S.errors[key] ? `<p class="err">${esc(prefix)}${esc(S.errors[key])}</p>` : ""; }
+
+  function renderRight() {
+    const s = S.session;
+    for (const id of ["#btn-decode", "#btn-table", "#btn-search"]) $(id).disabled = !S.live || !s || !!S.busy[{ "#btn-decode": "decode", "#btn-table": "table", "#btn-search": "search" }[id]];
+    if (!s) { ["#decode-out", "#terms-out", "#table-out", "#spec-out", "#search-region", "#search-progress", "#search-out"].forEach(id => { $(id).innerHTML = ""; }); return; }
+    renderDecode();
+    renderTerminals();
+    renderTable();
+    renderSpec();
+    renderSearch();
+  }
+
+  function renderDecode() {
+    const r = S.session.results.decode, out = [];
+    out.push(busyNote("decode", "Decoding…"), errorNote("decode", "Decode failed: "));
+    if (!r) out.push(`<p class="small muted">Set a syndrome in Syndrome mode, then press Decode.</p>`);
+    else {
+      const current = D.current.decode;
+      if (!current) out.push(staleNote("decode"));
+      const body = [];
+      const none = D.local ? "no error inside the patch gives this syndrome on the enforced checks" : "no error has this syndrome";
+      body.push(`<p>${r.status === "optimal" ? `Optimal, cost <b class="tnum">${r.cost}</b>` : `Infeasible: ${current ? none : "no error fits"}`}</p>`);
+      body.push(`<p class="small muted">${esc(r.solver)}, <span class="tnum">${r.ms}</span> ms${r.verified ? ", engine verify() passed" : ""}</p>`);
+      if (current && r.status === "optimal") {
+        const ones = new Set(r.error.map(a => D.geo.qubitIndex(a)));
+        const c = checkWitness(D, ones, r.cost, null);
+        if (c.ok) body.push(`<p>Syndrome verified <span class="small muted">(recomputed in the viewer on ${c.checked} ${D.local ? "enforced " : ""}checks)</span></p>`);
+        else {
+          const list = c.mismatched.slice(0, 8).map(i => esc(describeCheck(D.geo, i))).join("; ");
+          body.push(`<p class="err">Warning: the witness does not reproduce the syndrome.${c.mismatched.length ? ` Mismatched checks: ${list}${c.mismatched.length > 8 ? "; …" : ""}.` : ""}${c.outside.length ? " It has errors outside the patch." : ""}${c.weightOk ? "" : " Its weight differs from the cost."}</p>`);
+        }
+        const showing = S.shown && S.shown.kind === "decode";
+        body.push(`<p><button type="button" data-act="show-decode"${showing ? " disabled" : ""}>${showing ? "Witness shown" : "Show witness"}</button></p>`);
+      }
+      if (S.config.r0_preset) body.push(r0Panel(r, current));
+      out.push(`<div class="result${current ? "" : " stale"}">${body.join("")}</div>`);
+    }
+    $("#decode-out").innerHTML = out.join("");
+  }
+
+  function r0Panel(r, current) {
+    const s = S.session, a = Core.alpha(s.graph.n, s.graph.edges), nE = s.graph.edges.length;
+    const pred = a === null ? null : nE - 2 * a;
+    const mw = current && r.status === "optimal" && s.scope === "global" ? r.cost : null;
+    return `<div class="r0"><p>MW(σ) <b class="tnum">${mw === null ? "—" : mw}</b> and 3n/2 − 2α(G) = ${nE} − 2·${a === null ? "α" : a} = <b class="tnum">${pred === null ? "—" : pred}</b></p>` +
+      `<p class="small muted">${a === null ? "α(G) is computed only for n ≤ 30. " : ""}${mw === null ? "Decode the current syndrome in global scope to compare." : mw === pred ? "Equal." : "Different."}</p></div>`;
+  }
+
+  function renderTerminals() {
+    const s = S.session, out = [];
+    if (!s.terminals.length) out.push(`<p class="small muted">No terminals. In Terminals mode (key 2), click qubits to add up to 6.</p>`);
+    else {
+      out.push(`<ol class="terms">`);
+      s.terminals.forEach((a, k) => {
+        const j = D.geo.qubitIndex(a);
+        const outside = D.local && D.Q && !D.Q.has(j) ? `<span class="small"> outside the patch</span>` : "";
+        out.push(`<li><span class="n">${k + 1}</span><span class="t">${esc(describeQubit(D.geo, j))}${outside}</span>` +
+          `<button type="button" class="icon" data-act="term-up" data-k="${k}" aria-label="Move terminal ${k + 1} up"${k === 0 ? " disabled" : ""}>↑</button>` +
+          `<button type="button" class="icon" data-act="term-down" data-k="${k}" aria-label="Move terminal ${k + 1} down"${k === s.terminals.length - 1 ? " disabled" : ""}>↓</button>` +
+          `<button type="button" class="icon" data-act="term-remove" data-k="${k}" aria-label="Remove terminal ${k + 1}">×</button></li>`);
+      });
+      out.push(`</ol>`);
+      if (s.terminals.length > 4) out.push(`<p class="notice warn">${s.terminals.length} terminals give ${1 << s.terminals.length} rows; each row is one decode.</p>`);
+    }
+    $("#terms-out").innerHTML = out.join("");
+  }
+
+  function rowCheck(entry, cost, match) {
+    if (!match || entry[0] === "any") return "";
+    if (match.c === null) return entry[0] === "eq" ? "✗ eq rows disagree" : "";
+    const ok = entry[0] === "eq" ? cost !== null && cost === match.c + entry[1] : cost === null || cost >= match.c + entry[1];
+    return ok ? "✓ pass" : "✗ fail";
+  }
+  function renderTable() {
+    const s = S.session, r = s.results.table, out = [];
+    out.push(busyNote("table", "Computing the table…"), errorNote("table", "Table failed: "));
+    if (!r) { if (s.terminals.length) out.push(`<p class="small muted">Press Compute table for the ${1 << s.terminals.length} rows.</p>`); }
+    else {
+      const current = D.current.table;
+      if (!current) out.push(staleNote("table"));
+      const body = [];
+      body.push(`<p class="small">Terminals ${r.terminals.map((a, k) => `${k + 1} ${esc(addrQubit(a))}`).join(", ")}</p>`);
+      body.push(`<table><thead><tr><th>a</th><th>cost</th><th>spec</th><th>check</th><th></th></tr></thead><tbody>`);
+      const rows = s.spec ? s.spec.rows : null;
+      for (const row of r.rows) {
+        const entry = current && rows ? rows[row.a] : null;
+        const shown = S.shown && S.shown.kind === "table" && S.shown.a === row.a;
+        body.push(`<tr${shown ? ' class="shown"' : ""}><td>${row.a}</td><td>${fmtCost(row.cost)}</td><td>${entry ? esc(entry.join(" ")) : ""}</td>` +
+          `<td>${entry ? rowCheck(entry, row.cost, r.match) : ""}</td>` +
+          `<td>${row.status === "optimal" && current ? `<button type="button" data-act="show-row" data-a="${row.a}"${shown ? " disabled" : ""}>${shown ? "Shown" : "Show"}</button>` : ""}</td></tr>`);
+      }
+      body.push(`</tbody></table>`);
+      body.push(`<p class="small">Unconstrained cost <b class="tnum">${fmtCost(r.unconstrained_cost)}</b></p>`);
+      const m = r.match;
+      if (m === null) body.push(`<p class="small muted">No match: ${esc(Core.specProblems(s.spec, s.terminals.length)[0] || "the spec has no eq row")}.</p>`);
+      else if (m.c === null) body.push(`<p>Does not match: the eq rows are infeasible or give different values of c.</p>`);
+      else body.push(`<p>${m.matches ? "Matches the spec" : "Does not match the spec"}: c = <b class="tnum">${m.c}</b>, margin <b class="tnum">${fmtMargin(m.margin)}</b></p>`);
+      out.push(`<div class="result${current ? "" : " stale"}">${body.join("")}</div>`);
+    }
+    $("#table-out").innerHTML = out.join("");
+  }
+
+  let specKey = "";
+  function renderSpec() {
+    const s = S.session, k = s.terminals.length, sel = $("#spec-preset");
+    sel.disabled = k === 0;
+    sel.options[0].disabled = k !== 2;
+    sel.options[1].disabled = k !== 3;
+    setValue(sel, s.spec ? s.spec.preset : "custom");
+    const key = JSON.stringify([k, s.spec, S.notices.spec]);
+    const box = $("#spec-out");
+    const focused = document.activeElement && box.contains(document.activeElement) ? document.activeElement.id : null;
+    if (key === specKey && box.innerHTML) return;
+    specKey = key;
+    const out = [];
+    if (S.notices.spec) out.push(`<p class="notice">${esc(S.notices.spec)}</p>`);
+    if (k === 0) out.push(`<p class="small muted">Choose terminals first; the spec has one row per assignment of their values.</p>`);
+    else if (s.spec) {
+      out.push(`<div class="spec-grid">`);
+      for (const a of Core.bitRows(k)) {
+        const e = s.spec.rows[a];
+        out.push(`<span class="tnum">${a}</span><select id="spec-op-${a}" data-a="${a}" class="spec-op" aria-label="Row ${a} condition">` +
+          ["eq", "ge", "any"].map(op => `<option${op === e[0] ? " selected" : ""}>${op}</option>`).join("") + `</select>` +
+          `<input id="spec-k-${a}" class="spec-k" data-a="${a}" type="number" min="0" step="1" value="${e[0] === "any" ? "" : e[1]}" aria-label="Row ${a} offset"${e[0] === "any" ? " disabled" : ""}>` +
+          `<span class="small muted">${e[0] === "eq" ? `Cost = c + ${e[1]}` : e[0] === "ge" ? `Cost ≥ c + ${e[1]}` : "no condition"}</span>`);
+      }
+      out.push(`</div>`);
+      const problems = Core.specProblems(s.spec, k);
+      if (problems.length) out.push(`<p class="notice warn">${esc(problems[0])}.</p>`);
+    }
+    box.innerHTML = out.join("");
+    if (focused && document.getElementById(focused)) document.getElementById(focused).focus();
+  }
+  function setSpecRow(a, op, offset) {
+    edit(s => {
+      const rows = { ...s.spec.rows };
+      rows[a] = op === "any" ? ["any"] : [op, offset];
+      s.spec = { preset: "custom", rows };
+    });
+  }
+
+  function regionInfo() {
+    const s = S.session, R = D.region.length;
+    if (!R) return { text: "Region: no checks. In Region mode (key 3), click checks to add them.", dropped: 0 };
+    const dropped = D.local ? D.region.filter(i => !D.enforced.has(i)).length : 0;
+    const eff = R - dropped;
+    const budget = searchParams().budget || 4096;
+    const total = eff <= 52 ? 2 ** eff : null;
+    const exhaustive = total !== null && total <= budget;
+    let text = `Region: ${R} checks${dropped ? `, ${dropped} outside the patch and dropped` : ""}. 2^${eff} = ${total === null ? `2^${eff}` : total.toLocaleString("en-US")} patterns: ${exhaustive ? "exhaustive" : `sampled, ${budget.toLocaleString("en-US")} of them`}.`;
+    return { text, dropped };
+  }
+  function renderSearch() {
+    const s = S.session;
+    if (!s) return;
+    const ri = regionInfo();
+    setText("#search-region", ri.text);
+    $("#btn-search").disabled = !S.live || !!S.busy.search;
+    $("#btn-cancel").disabled = !S.job;
+    const prog = [];
+    const job = S.job || S.lastJob;
+    if (job && job.summary) {
+      const sm = job.summary, p = job.progress;
+      const state = S.job ? "Running" : { done: "Done", cancelled: "Cancelled", error: "Stopped by an error" }[job.state] || job.state;
+      prog.push(`<progress max="${Math.max(1, p.total)}" value="${p.done}"></progress>`);
+      prog.push(`<p class="small tnum">${state}: ${p.done} of ${p.total} candidates; ${sm.matched} matched, ${sm.rejected} rejected, ${sm.filtered} filtered, ${sm.infeasible_syndrome} infeasible syndromes; ${sm.solver_calls} solver calls, ${sm.cache_hits} cache hits; ${Number(sm.elapsed_s).toFixed(1)} s.</p>`);
+    } else if (S.job) prog.push(`<progress></progress><p class="small muted">Starting workers…</p>`);
+    if (S.errors.search) prog.push(`<p class="err">${esc(S.errors.search)}</p>`);
+    $("#search-progress").innerHTML = prog.join("");
+    const r = s.results.search, out = [];
+    if (r) {
+      const current = D.current.search;
+      if (!current) out.push(staleNote("search"));
+      const sm = r.summary, body = [];
+      body.push(`<p class="small">${sm.exhaustive ? "Exhaustive" : "Sampled"}: ${sm.candidates} candidates, ${sm.matched} matched. Budget ${r.params.budget}, seed ${r.params.seed}, top ${r.params.top_k}${r.params.max_weight === null ? "" : `, max weight ${r.params.max_weight}`}, ${r.params.workers} worker${r.params.workers === 1 ? "" : "s"}, ${esc(r.params.solver)}.</p>`);
+      if (r.params.dropped_region && r.params.dropped_region.length) body.push(`<p class="notice warn">Dropped region checks outside the patch: ${r.params.dropped_region.map(a => `(e = ${a.e}, t = ${a.t})`).join(", ")}.</p>`);
+      if (!r.matches.length) body.push(`<p class="small muted">No pattern meets the spec.</p>`);
+      else {
+        body.push(`<div class="results"><div class="res-head"><span>rank</span><span>c</span><span>margin</span><span>|p|</span><span>pattern</span></div>`);
+        for (const m of r.matches) {
+          const w = [...m.pattern].filter(ch => ch === "1").length;
+          body.push(`<button type="button" class="res" data-act="load" data-rank="${m.rank}"${current ? "" : " disabled"} aria-label="Load search result ${m.rank}">` +
+            `<span>${m.rank}</span><span>${m.c}</span><span>${fmtMargin(m.margin)}</span><span>${w}</span><span class="pattern">${m.pattern}</span></button>`);
+        }
+        body.push(`</div>`);
+      }
+      out.push(`<div class="result${current ? "" : " stale"}">${body.join("")}</div>`);
+    }
+    $("#search-out").innerHTML = out.join("");
+  }
+
+  // ---------------------------------------------------------- tooltip and canvas events
+  const tip = $("#tooltip");
+  function tooltipLines(t) {
+    const geo = D.geo, k = t.dataset.k, lines = [];
+    if (k === "zc") {
+      const i = +t.dataset.i;
+      lines.push(describeCheck(geo, i), `index ${i}; σ = ${D.sigma.has(i) ? 1 : 0}`);
+      if (D.regionPos.has(i)) lines.push(`region position ${D.regionPos.get(i) + 1}`);
+      if (D.local && !D.enforced.has(i)) lines.push("not enforced: outside the patch");
+    } else if (k === "eq" || k === "vq") {
+      const j = +t.dataset.j;
+      lines.push(describeQubit(geo, j) + (k === "vq" ? ` (vertical edge between layers ${geo.qubit(j).t} and ${geo.qubit(j).t + 1})` : ""), `index ${j}`);
+      if (D.termPos.has(j)) lines.push(`terminal ${D.termPos.get(j) + 1}`);
+      if (D.err.has(j)) lines.push("in error in the shown witness");
+      if (D.Q && D.Q.has(j)) lines.push("in the patch");
+    } else if (k === "vx") {
+      lines.push(`Vertex ${t.dataset.v}, layer ${t.dataset.l}`, "not a qubit");
+    }
+    if ((k === "vx" || k === "vq") && D.U.has(+t.dataset.v)) lines.push("in the patch vertex set U");
+    return lines;
+  }
+  function showTip(ev) {
+    const t = ev.target.closest && ev.target.closest(".hit");
+    if (!t || !D || S.drag) { tip.hidden = true; return; }
+    tip.innerHTML = tooltipLines(t).map(x => `<div>${esc(x)}</div>`).join("");
+    tip.hidden = false;
+    const x = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8), y = Math.min(ev.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  }
+  function onCanvasClick(ev) {
+    const t = ev.target.closest && ev.target.closest(".hit");
+    if (!t || !S.session) return;
+    if (S.dragMoved) { S.dragMoved = false; return; }
+    const k = t.dataset.k;
+    if (S.tool === "syndrome" && k === "zc") toggleCheckIn("syndrome", +t.dataset.i);
+    else if (S.tool === "region" && k === "zc") toggleCheckIn("region", +t.dataset.i);
+    else if (S.tool === "terminals" && (k === "eq" || k === "vq")) toggleTerminal(+t.dataset.j);
+    else if (S.tool === "patch" && (k === "vx" || k === "vq")) togglePatchVertex(+t.dataset.v);
+  }
+  function svgPoint(svg, ev) {
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function onPointerDown(ev) {
+    const t = ev.target.closest && ev.target.closest(".hit");
+    if (!ev.shiftKey || !t || !(t.dataset.k === "vx" || t.dataset.k === "vq") || !S.session) return;
+    ev.preventDefault();
+    S.drag = { v: +t.dataset.v, before: inputsOf(S.session), svg: t.ownerSVGElement, moved: false };
+    tip.hidden = true;
+  }
+  let dragFrame = 0;
+  function onPointerMove(ev) {
+    if (!S.drag) return;
+    const p = svgPoint(S.drag.svg, ev), inner = SIZE - 2 * MARGIN;
+    const clamp = x => Math.min(1, Math.max(0, x));
+    S.session.graph.layout[String(S.drag.v)] = [+clamp((p.x - MARGIN) / inner).toFixed(4), +clamp((p.y - MARGIN) / inner).toFixed(4)];
+    S.drag.moved = true;
+    if (!dragFrame) dragFrame = requestAnimationFrame(() => {
+      dragFrame = 0;
+      if (!S.drag) return;
+      const svgIndex = $$("#panels svg").indexOf(S.drag.svg);
+      D = derive();
+      renderCanvas();
+      if (svgIndex >= 0) S.drag.svg = $$("#panels svg")[svgIndex];
+    });
+  }
+  function onPointerUp() {
+    if (!S.drag) return;
+    const d = S.drag;
+    S.drag = null;
+    if (d.moved) {
+      S.dragMoved = true;
+      S.undo.push(d.before);
+      if (S.undo.length > 50) S.undo.shift();
+      S.redo = [];
+      render();
+      setTimeout(() => { S.dragMoved = false; }, 0);
+    }
+  }
+
+  // ---------------------------------------------------------- wiring
+  function setTool(tool) { S.tool = tool; render(); }
+  function syncGraphControls() {
+    const s = S.session;
+    if (!s) return;
+    const pre = $("#g-preset");
+    pre.value = s.graph.preset in NAMES ? s.graph.preset : "custom";
+    if (s.graph.preset === "random_cubic") { $("#g-n").value = s.graph.n; $("#g-seed").value = s.graph.seed ?? 0; }
+    if (s.graph.preset === "custom") $("#g-edges").value = s.graph.edges.map(([u, w]) => `${u}-${w}`).join(" ");
+    const Lsel = $("#g-L");
+    if (![...Lsel.options].some(o => o.value === String(s.L))) Lsel.insertAdjacentHTML("beforeend", `<option>${s.L}</option>`);
+    Lsel.value = String(s.L);
+    syncPresetFields();
+  }
+  function syncPresetFields() {
+    const p = $("#g-preset").value;
+    $("#g-random").hidden = p !== "random_cubic";
+    $("#g-custom").hidden = p !== "custom";
+  }
+
+  function wire() {
+    $("#g-preset").addEventListener("change", syncPresetFields);
+    $("#btn-new").addEventListener("click", () => { S.errors.build = null; try { newSession(); } catch (e) { S.errors.build = e.message; render(); } });
+    $("#btn-open").addEventListener("click", () => $("#file-open").click());
+    $("#file-open").addEventListener("change", ev => { const f = ev.target.files[0]; ev.target.value = ""; if (f) openFile(f); });
+    $("#btn-save").addEventListener("click", saveSession);
+    $("#btn-undo").addEventListener("click", undo);
+    $("#btn-redo").addEventListener("click", redo);
+    $$(".tools button").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+    $("#btn-clear-syn").addEventListener("click", () => edit(s => { s.syndrome = []; }));
+    $("#btn-clear-region").addEventListener("click", () => edit(s => { s.region = []; }));
+    $("#btn-clear-terms").addEventListener("click", () => edit(s => { s.terminals = []; }));
+    $("#btn-random").addEventListener("click", randomSyndrome);
+    $("#btn-fill-gap0").addEventListener("click", () => edit(s => {
+      const geo = geometry(s), on = new Set(s.syndrome.map(a => geo.zc(a.e, a.t)));
+      for (let e = 0; e < geo.nE; e++) on.add(geo.zc(e, 0));
+      s.syndrome = [...on].sort((a, b) => a - b).map(i => geo.check(i));
+    }, { label: "Gap 0 filled (r0 preset)" }));
+    $$('input[name="scope"]').forEach(r => r.addEventListener("change", () => edit(s => { s.scope = r.value; })));
+    const setLayers = () => edit(s => {
+      let l0 = +$("#p-l0").value, l1 = +$("#p-l1").value;
+      if (l0 > l1) { if (document.activeElement === $("#p-l0")) l1 = l0; else l0 = l1; }
+      s.patch = { vertices: s.patch ? s.patch.vertices : [], layers: [l0, l1] };
+    });
+    $("#p-l0").addEventListener("change", setLayers);
+    $("#p-l1").addEventListener("change", setLayers);
+    $("#btn-ball").addEventListener("click", () => {
+      const r = parseInt($("#p-radius").value, 10);
+      if (!(r >= 0)) { S.notices.left = "The radius must be a non-negative integer."; render(); return; }
+      S.notices.left = null;
+      edit(s => {
+        const U = Core.ball(s.graph.n, s.graph.edges, +$("#p-centre").value, r);
+        s.patch = { vertices: U, layers: s.patch ? s.patch.layers : [0, s.L - 1] };
+      });
+    });
+    $("#btn-clear-patch").addEventListener("click", () => edit(s => { s.patch = null; }));
+    $$('input[name="arrange"]').forEach(r => r.addEventListener("change", () => renderCanvas()));
+    $("#show-labels").addEventListener("change", () => renderCanvas());
+    $("#notes").addEventListener("change", ev => edit(s => { s.notes = ev.target.value; }));
+    $("#btn-distances").addEventListener("click", computeDistances);
+    $("#btn-decode").addEventListener("click", decode);
+    $("#btn-table").addEventListener("click", computeTable);
+    $("#btn-search").addEventListener("click", runSearch);
+    $("#btn-cancel").addEventListener("click", cancelSearch);
+    $("#p-budget").addEventListener("input", () => { if (S.session) setText("#search-region", regionInfo().text); });
+    $("#spec-preset").addEventListener("change", ev => {
+      S.notices.spec = null;
+      edit(s => { s.spec = { preset: ev.target.value, rows: Core.presetRows(ev.target.value, s.terminals.length) }; });
+    });
+    $("#spec-out").addEventListener("change", ev => {
+      const t = ev.target, a = t.dataset.a;
+      if (!a) return;
+      S.notices.spec = null;
+      const op = $(`#spec-op-${a}`).value;
+      const raw = $(`#spec-k-${a}`).value.trim();
+      const offset = raw === "" ? 0 : Number(raw);
+      if (op !== "any" && (!Number.isInteger(offset) || offset < 0)) { S.notices.spec = "Offsets are non-negative integers."; specKey = ""; render(); return; }
+      setSpecRow(a, op, offset);
+    });
+    document.body.addEventListener("click", ev => {
+      const b = ev.target.closest && ev.target.closest("[data-act]");
+      if (!b || b.disabled) return;
+      const act = b.dataset.act;
+      if (act === "show-decode") { S.shown = { kind: "decode" }; render(); }
+      else if (act === "show-row") { S.shown = { kind: "table", a: b.dataset.a }; render(); }
+      else if (act === "term-up") moveTerminal(+b.dataset.k, -1);
+      else if (act === "term-down") moveTerminal(+b.dataset.k, 1);
+      else if (act === "term-remove") { const geo = geometry(S.session); toggleTerminal(geo.qubitIndex(S.session.terminals[+b.dataset.k])); }
+      else if (act === "load") loadResult(+b.dataset.rank);
+    });
+    const panels = $("#panels");
+    panels.addEventListener("click", onCanvasClick);
+    panels.addEventListener("pointermove", showTip);
+    panels.addEventListener("pointerleave", () => { tip.hidden = true; });
+    panels.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("keydown", ev => {
+      const typing = ev.target.closest && ev.target.closest("input, select, textarea");
+      if (ev.key === "Escape") tip.hidden = true;
+      if ((ev.ctrlKey || ev.metaKey) && !typing && ev.key.toLowerCase() === "z") { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+      if ((ev.ctrlKey || ev.metaKey) && !typing && ev.key.toLowerCase() === "y") { ev.preventDefault(); redo(); return; }
+      if (!typing && !ev.ctrlKey && !ev.metaKey && !ev.altKey && /^[1-4]$/.test(ev.key)) setTool(TOOLS[+ev.key - 1]);
+    });
+  }
+
+  // ---------------------------------------------------------- self-test (V13)
+  function selftest() {
+    const results = [];
+    const data = JSON.parse(document.getElementById("selftest-data").textContent.replace("/*SELFTEST-BEGIN*/", "").replace("/*SELFTEST-END*/", ""));
+    if (!data) { results.push([false, "no embedded self-test vectors"]); return results; }
+    const geo = Core.makeGeometry(data.n, data.edges, data.L);
+    let pass = 0;
+    for (const vec of data.t4) {
+      const j = geo.qubitIndex(vec.qubit);
+      const got = [...geo.syndromeOf([j])].sort((a, b) => a - b);
+      const want = vec.fires.map(a => geo.zc(a.e, a.t)).sort((a, b) => a - b);
+      const ok = JSON.stringify(got) === JSON.stringify(want);
+      if (ok) pass++;
+      else results.push([false, `T4 ${addrQubit(vec.qubit)}: viewer fires ${JSON.stringify(got.map(i => geo.check(i)))}, expected ${JSON.stringify(vec.fires)}`]);
+    }
+    results.unshift([pass === data.t4.length, `T4 single-qubit syndromes for K4 with L = ${data.L}: ${pass} of ${data.t4.length} vectors pass`]);
+    const abc = Core.sha256Hex("abc");
+    results.push([abc === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "SHA-256 of \"abc\""]);
+    const session = Core.validateSession(data.session);
+    for (const [kind, want] of Object.entries(data.hashes)) {
+      const got = Core.inputsHash(kind, session, kind === "search" ? data.search_params : undefined);
+      results.push([got === want, `inputs_hash for ${kind}: viewer ${got}, engine ${want}`]);
+    }
+    return results;
+  }
+  function renderSelftest() {
+    const results = selftest(), ok = results.every(r => r[0]);
+    document.body.className = "selftest";
+    document.body.innerHTML = `<h1 class="${ok ? "st-pass" : "st-fail"}" id="selftest-result">Self-test ${ok ? "passed" : "failed"}</h1>` +
+      `<ul>${results.map(([pass, text]) => `<li>${pass ? "pass" : "<b>fail</b>"}: ${esc(text)}</li>`).join("")}</ul>`;
+    document.title = `GadgetLab self-test: ${ok ? "pass" : "fail"}`;
+    console.log(`GadgetLab self-test ${ok ? "passed" : "failed"}`, results);
+  }
+
+  // ---------------------------------------------------------- start
+  async function start() {
+    if (params.get("selftest") === "1") { renderSelftest(); return; }
+    wire();
+    if (location.protocol === "file:") {
+      S.live = false;
+      S.config.r0_preset = params.get("r0_preset") === "1";
+      S.staticReason = "Static mode: open a saved session to inspect it. Computing needs the engine: run gadgetlab serve and open http://127.0.0.1:8765.";
+      render();
+      return;
+    }
+    try {
+      S.config = await api("/api/config");
+      S.live = true;
+    } catch (_) {
+      S.live = false;
+      S.config.r0_preset = params.get("r0_preset") === "1";
+      S.staticReason = "Static mode: no GadgetLab engine answers at this address. Open a saved session to inspect it, or run gadgetlab serve.";
+      render();
+      return;
+    }
+    render();
+    await newSession();
+  }
+  start();
+})();
+</script>
+</body>
+</html>

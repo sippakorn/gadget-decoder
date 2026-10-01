@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gadgetlab"
+version = "1.0.0"
+description = "Syndrome-gadget explorer for the quantum code HGP(cycle code of G, R_L)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.22",
+    "networkx>=3.0",
+    "pulp>=2.7,<4",  # 4.0 no longer bundles CBC
+]
+
+[project.optional-dependencies]
+highs = ["highspy"]
+dev = ["pytest"]
+
+[project.scripts]
+gadgetlab = "gadgetlab.cli:main"
+
+[tool.setuptools]
+packages = ["gadgetlab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running case; skipped unless pytest is run with --runslow",
+]
